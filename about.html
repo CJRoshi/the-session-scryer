@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>About - The Session Scryer</title>
+  <meta name="robots" content="noindex" />
+
+  <!-- Favicon — same blue-only ScryerLogoBright variant the rest of the
+       Scryer surfaces use, so browser tabs read consistently. -->
+  <link rel="icon" type="image/png" href="./images/logos/ScryerLogoBright.png" />
+
+  <!-- React 18 + Babel + Tailwind (matches index.html / scry.html so the
+       shared ScryerHeader / ScryerFooter components compile the same). -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <style>
+    /* Local copy of Typostuck — same font the rest of the Scryer uses,
+       mirrored here so the About page title matches the app's display
+       face. */
+    @font-face {
+      font-family: 'Typostuck';
+      src: url('./fonts/TYPOSTUCK.ttf') format('truetype');
+      font-display: swap;
+    }
+
+    /* Body bg + font match the Scryer's Home and entry-view defaults so
+       flipping between About and the rest of the site doesn't feel
+       like a different site. */
+    body {
+      background-color: #1a1a1a;
+      color: #eee;
+      font-family: 'Courier New', monospace;
+      margin: 0;
+    }
+
+    /* ---- About content panel ----------------------------------------
+       Centered, max-width-capped block of prose. No card / panel
+       background — the dark body bg carries the chrome's mood; the
+       title and body text on plain dark match the Scryer's home page
+       aesthetic where the hero blurb also sits directly on the bg. */
+    .about-container {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 48px 24px 32px;
+    }
+    .about-title {
+      font-family: 'Typostuck', 'Courier New', monospace;
+      font-size: 2.5rem;
+      line-height: 1.05;
+      color: #f4f4f4;
+      text-align: center;
+      margin: 0 0 32px;
+    }
+    .about-body {
+      font-family: 'Courier New', monospace;
+      font-size: 1rem;
+      line-height: 1.6;
+      color: #d8d8d8;
+    }
+    .about-body p {
+      margin: 0 0 16px;
+    }
+    .about-body p:last-child {
+      margin-bottom: 0;
+    }
+
+    /* Signature uses the SAME green as the Connector's About page
+       sign-off (#1b7539) per user spec, for visual continuity across
+       the two About pages. On the Scryer's dark body bg the green is
+       lower-contrast than it was on the Connector's cream content
+       card, so a subtle dark text-shadow lifts legibility without
+       changing the declared color. */
+    .signature {
+      color: #1b7539;
+      font-family: 'Courier New', monospace;
+      font-weight: bold;
+      margin-top: 32px;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+    }
+  </style>
+</head>
+
+<body>
+<div id="root"></div>
+
+<!-- Shared chrome components — same JSX files index.html + scry.html use. -->
+<script type="text/babel" src="./components/scryer-header.js"></script>
+<script type="text/babel" src="./components/scryer-footer.js"></script>
+
+<script type="text/babel">
+  const { ScryerHeader, ScryerFooter } = window;
+
+  const App = () => (
+    <>
+      {/* app-chrome wrapper kept for parity with index.html / scry.html
+          (where the class lets the dive choreography fade chrome during
+          the SCRY transition). Harmless here — no dive, no fade. */}
+      <div className="app-chrome">
+        <ScryerHeader/>
+      </div>
+
+      <main className="about-container">
+        <h1 className="about-title">About</h1>
+        <div className="about-body">
+          <p>Hey. Welcome to The Session Scryer.</p>
+
+          <p>
+            This is a webapp/tool that I developed as an extension of the Classpect Connector and its theories.
+          </p>
+
+          <p>
+            The main use of this site is to observe whole sessions and some statistics related to them.
+            It's pretty easy to do&mdash; type it in (or tap it in, if you're using the graph), hit SCRY, and go wild.
+          </p>
+
+          <p>
+            This site is basically meant to help you with understanding and writing sessions. It's also a
+            free answer to HWTSG content that is rampant on HStwt (I don't actually know if this is true).
+          </p>
+
+          <p>That's basically it from me! Take care now.</p>
+
+          <p className="signature">-- Signing off, CC.</p>
+        </div>
+      </main>
+
+      <div className="app-chrome">
+        <ScryerFooter/>
+      </div>
+    </>
+  );
+
+  ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>

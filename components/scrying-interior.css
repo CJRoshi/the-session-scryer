@@ -1,0 +1,21 @@
+/* =========================================================================
+   SCRYING INTERIOR — styles
+   ========================================================================= */
+
+.scrying-interior-pentagon {
+  pointer-events: none;
+  filter:
+    drop-shadow(0 0  18px rgba(0, 0, 255, calc(0.55 * var(--scryint-glow, 1))))
+    drop-shadow(0 0  50px rgba(0, 0, 255, calc(0.30 * var(--scryint-glow, 1))));
+}
+
+.scrying-interior-pentagon-poly {
+  fill: var(--scryint-color, #222288);
+  stroke: none;
+}
+
+.scrying-interior-guides line {
+  stroke: rgba(180, 210, 255, 0.18);
+  stroke-width: 1.4;
+  stroke-dasharray: 4 8;
+}

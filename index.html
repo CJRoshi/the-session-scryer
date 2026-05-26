@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>The Session Scryer</title>
+  <meta name="robots" content="noindex" />
+
+  <!-- =====================================================================
+       Phase G: deep-link compatibility bridge.
+       Old shareable URLs were produced as `…/session-prototype/#CODE` back
+       when index.html WAS the app. Now that index.html is the Home page
+       and the app lives at scry.html, those URLs would just dump the user
+       on Home with a useless hash. This script runs SYNCHRONOUSLY in the
+       <head> (before anything else loads) — if it sees a non-empty,
+       non-'#inside' hash, it forwards the user to scry.html with the
+       hash preserved, so the old links still land in the results view.
+       Uses location.replace so the redirect doesn't pollute history.
+       ===================================================================== -->
+  <script>
+    (function () {
+      var h = window.location.hash;
+      if (h && h !== '#' && h !== '#inside') {
+        window.location.replace('./scry.html' + h);
+      }
+    })();
+  </script>
+
+  <!-- Favicon — same blue-only ScryerLogoBright variant scry.html uses, so
+       browser tabs read consistently across Home and the app. -->
+  <link rel="icon" type="image/png" href="./images/logos/ScryerLogoBright.png" />
+
+  <!-- React 18 + Babel + Tailwind (matches scry.html so the shared
+       ScryerHeader / ScryerFooter components compile the same way). -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <style>
+    /* Local copy of Typostuck — same font scry.html uses, mirrored here
+       so the Home page chrome (title block, sample session cards) match
+       the app's display face. Carima is loaded for parity in case any
+       future Home embellishment wants it. */
+    @font-face {
+      font-family: 'Typostuck';
+      src: url('./fonts/TYPOSTUCK.ttf') format('truetype');
+      font-display: swap;
+    }
+    @font-face {
+      font-family: 'Carima';
+      src: url('./fonts/Carima-Regular.ttf') format('truetype');
+      font-display: swap;
+    }
+
+    :root {
+      --orb-border: rgba(255, 255, 255, 0.18);
+      --orb-bg:     rgba(255, 255, 255, 0.035);
+      --text-dim:   #888;
+      --text-faint: #555;
+    }
+    /* Body bg + font match scry.html's entry-view defaults so flipping
+       between Home and the app doesn't feel like a different site. */
+    body {
+      background-color: #1a1a1a;
+      color: #eee;
+      font-family: 'Courier New', monospace;
+      margin: 0;
+    }
+
+    /* ---- Home hero ---------------------------------------------------- */
+    .home-hero {
+      max-width: 880px;
+      margin: 0 auto;
+      padding: 48px 24px 24px;
+      text-align: center;
+    }
+    .home-hero-logo {
+      width: 192px;
+      height: 192px;
+      margin: 0 auto 16px;
+      image-rendering: pixelated;
+      display: block;
+      /* Soft luminous halo so the logo reads as the page's focal point.
+         Faint cueball-blue tint nods to the Scryer's accent palette. */
+      filter:
+        drop-shadow(0 0 12px rgba(60, 108, 184, 0.45))
+        drop-shadow(0 6px 18px rgba(0, 0, 0, 0.7));
+    }
+    .home-hero-title {
+      font-family: 'Typostuck', 'Courier New', monospace;
+      font-size: 3rem;
+      line-height: 1.05;
+      color: #f4f4f4;
+      margin: 0 0 8px;
+    }
+    .home-hero-tagline {
+      font-family: 'Courier New', monospace;
+      font-size: 1rem;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: #6dd1f4;
+      margin: 0 0 24px;
+    }
+    .home-hero-blurb {
+      font-family: 'Courier New', monospace;
+      font-size: 1rem;
+      line-height: 1.55;
+      color: #d8d8d8;
+      max-width: 640px;
+      margin: 0 auto 28px;
+    }
+    .home-hero-blurb p { margin: 0 0 12px; }
+    .home-hero-blurb p:last-child { margin-bottom: 0; }
+
+    /* "Begin Scrying →" CTA. Mirrors the SCRY button on scry.html
+       (Typostuck, uppercase, console-command spacing) so the Home CTA
+       reads as the same family — "this is the button that takes you
+       into the scrying flow." */
+    .home-cta {
+      display: inline-block;
+      font-family: 'Typostuck', 'Courier New', monospace;
+      font-size: 1.5rem;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      text-decoration: none;
+      color: #1a1a1a;
+      background: #f4f4f4;
+      border: 2px solid rgba(60, 108, 184, 0.55);
+      border-radius: 4px;
+      padding: 14px 40px;
+      min-width: 240px;
+      cursor: pointer;
+      box-shadow:
+        0 4px 16px rgba(0, 0, 0, 0.55),
+        0 0 28px rgba(60, 108, 184, 0.25);
+      transition: background 0.15s, border-color 0.15s, color 0.15s, box-shadow 0.15s, transform 0.15s;
+    }
+    .home-cta:hover {
+      background: #ffffff;
+      border-color: rgba(109, 209, 244, 0.9);
+      color: #000000;
+      box-shadow:
+        0 6px 22px rgba(0, 0, 0, 0.7),
+        0 0 38px rgba(109, 209, 244, 0.5);
+      transform: translateY(-1px);
+    }
+
+    /* ---- Sample sessions section -------------------------------------- */
+    .home-samples {
+      max-width: 1080px;
+      margin: 32px auto 16px;
+      padding: 0 24px;
+    }
+    .home-samples-divider {
+      font-family: 'Courier New', monospace;
+      font-size: 0.875rem;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      color: #888;
+      text-align: center;
+      margin: 0 0 18px;
+      position: relative;
+    }
+    .home-samples-divider::before,
+    .home-samples-divider::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      width: calc(50% - 130px);
+      height: 1px;
+      background: rgba(255, 255, 255, 0.12);
+    }
+    .home-samples-divider::before { left:  0; }
+    .home-samples-divider::after  { right: 0; }
+
+    .home-samples-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+    @media (max-width: 760px) {
+      .home-samples-grid { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 480px) {
+      .home-samples-grid { grid-template-columns: 1fr; }
+    }
+    .home-sample-card {
+      display: block;
+      text-decoration: none;
+      color: inherit;
+      background: #2a2a2a;
+      border: 1px solid #444;
+      border-radius: 6px;
+      padding: 16px 18px;
+      transition: border-color 0.15s, background 0.15s, transform 0.15s, box-shadow 0.15s;
+    }
+    .home-sample-card:hover {
+      border-color: rgba(109, 209, 244, 0.6);
+      background: #2f2f2f;
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5), 0 0 18px rgba(109, 209, 244, 0.18);
+    }
+    .home-sample-card-name {
+      font-family: 'Typostuck', 'Courier New', monospace;
+      font-size: 1.25rem;
+      color: #f4f4f4;
+      margin: 0 0 6px;
+      line-height: 1.1;
+    }
+    .home-sample-card-desc {
+      font-family: 'Courier New', monospace;
+      font-size: 0.8125rem;
+      color: #bbb;
+      line-height: 1.4;
+      margin: 0 0 8px;
+    }
+    .home-sample-card-code {
+      font-family: 'Courier New', monospace;
+      font-size: 0.6875rem;
+      letter-spacing: 1.5px;
+      color: #6dd1f4;
+      text-transform: uppercase;
+    }
+
+    /* ---- Page-level chrome wrappers (parallel to scry.html) ---------- */
+    .app-chrome { /* no fade behavior on Home, but the class kept for parity */ }
+  </style>
+</head>
+
+<body>
+<div id="root"></div>
+
+<!-- Shared chrome components — same JSX files scry.html uses. -->
+<script type="text/babel" src="./components/scryer-header.js"></script>
+<script type="text/babel" src="./components/scryer-footer.js"></script>
+
+<script type="text/babel">
+  const { ScryerHeader, ScryerFooter } = window;
+
+  const App = () => (
+    <>
+      <div className="app-chrome">
+        <ScryerHeader/>
+      </div>
+
+      {/* Hero: logo + title + tagline + intro paragraphs + CTA. The CTA
+          is a plain anchor to scry.html so it benefits from native
+          link behavior (tab middle-click, copy link, etc.). */}
+      <section className="home-hero">
+        <img className="home-hero-logo"
+             src="./images/logos/ScryerLogoRegular.png"
+             alt="The Session Scryer logo"/>
+        <h1 className="home-hero-title">The Session Scryer</h1>
+        <div className="home-hero-tagline">A Classpect Connector tool</div>
+        <div className="home-hero-blurb">
+          <p>
+            A web-based tool for analyzing game sessions composed of several classpects, based on The Classpect Connector.
+
+            Enter in a session via eny of three methods-- graph-based, text-based, or raw code-- and the Scryer will tell you about how the game might go.
+
+            You will get stats related to who might be the leader, the overall active/passive balance, and more esoteric predictions about how orderly your game is, or how well your team works together.
+            Are you ready to scry?
+          </p>
+        </div>
+        <a className="home-cta" href="./scry.html">
+          Begin Scrying →
+        </a>
+      </section>
+
+      <div className="app-chrome">
+        <ScryerFooter/>
+      </div>
+    </>
+  );
+
+  ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>

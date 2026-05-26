@@ -1,0 +1,209 @@
+/* =========================================================================
+   SCRYING BALL — visual styles
+   -------------------------------------------------------------------------
+
+   What lives here:
+     - The ball stage / wrap / breath animation
+     - The ball-behind (dark scrying-space backdrop + in-ball pentagon)
+     - The cueball SVG itself
+     - The three cutout groups: mask cutouts, outline etch, interior flash
+
+   What does NOT live here:
+     - Entry view (mode switcher, input fields)
+     - Results view (orbs, grid, lunar moons, scrying-pentagon backdrop)
+     - Page chrome (header, footer, brand, stars)
+   ========================================================================= */
+
+/* ================================================================
+   BALL STAGE
+   ================================================================ */
+.ball-stage {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  z-index: 3;
+  transform: translateY(100vh);
+  transition: transform 0.75s cubic-bezier(0.22, 0.9, 0.3, 1.05);
+}
+body.scrolling .ball-stage,
+body.stamping  .ball-stage,
+body.flashing  .ball-stage,
+body.opening   .ball-stage,
+body.diving    .ball-stage,
+body.arriving  .ball-stage,
+body.inside    .ball-stage {
+  transform: translateY(0);
+}
+
+/* The ball itself: visible at rest size 1; the breathe animation gives
+   it some life. Dive scales it up at the very end. */
+.ball-wrap {
+  position: relative;
+  width: 320px;
+  height: 320px;
+  opacity: 1;
+  transform: scale(1);
+  /* Flash color drives outline stroke + glow. The React component sets
+     this via inline style based on its flashColor prop. */
+  color: var(--flash-color, #e50000);
+  transition: opacity 0.55s ease,
+              transform 0.85s cubic-bezier(0.55, 0, 0.85, 0.2);
+}
+
+/* ---- Behind the ball (scrying space) ---- */
+.ball-behind {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  overflow: hidden;
+  background: radial-gradient(ellipse at center, #10132a 0%, #07081a 55%, #020209 100%);
+}
+
+/* ---- In-ball inverted pentagon (the 8-Ball "window") ---- */
+.ball-pentagon {
+  position: absolute;
+  inset: 0;
+  width:  100%;
+  height: 100%;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.55s ease;
+  /* Single tight halo — keeps the silhouette readable as a flat-color
+     shape while still giving it a "lit neon" glow past the cutout edges. */
+  filter: drop-shadow(0 0 8px rgba(0, 0, 255, 0.7));
+}
+body.opening  .ball-pentagon,
+body.diving   .ball-pentagon,
+body.arriving .ball-pentagon,
+body.inside   .ball-pentagon {
+  opacity: 1;
+}
+.ball-pentagon-poly {
+  fill: #0000FF;     /* Homestuck-canonical pure blue */
+  stroke: none;
+}
+
+/* ---- Cueball SVG ---- */
+.cueball-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  animation: scryball-breathe 4.5s ease-in-out infinite;
+  transform-origin: center;
+  filter: drop-shadow(0 30px 40px rgba(0,0,0,0.95));
+  transition: opacity 0.9s ease;
+  pointer-events: none;
+}
+@keyframes scryball-breathe {
+  0%, 100% { transform: scale(1);     filter: brightness(1)    drop-shadow(0 30px 40px rgba(0,0,0,0.95)); }
+  50%      { transform: scale(1.012); filter: brightness(1.06) drop-shadow(0 30px 55px rgba(0,0,0,0.95)); }
+}
+
+/* ---- Cutouts (mask holes) ---- */
+.cutouts {
+  opacity: 0;
+  transition: opacity 0.55s ease;
+}
+body.opening  .cutouts,
+body.diving   .cutouts,
+body.arriving .cutouts,
+body.inside   .cutouts {
+  opacity: 1;
+}
+
+/* ---- Cutout outlines ---- */
+.cutout-outline {
+  fill: none;
+  stroke: var(--flash-color, #e50000);
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 0 4px var(--flash-color, #e50000));
+  pointer-events: none;
+  /* All shapes use pathLength="100" so one dasharray etches them all. */
+  stroke-dasharray: 100;
+  stroke-dashoffset: 100;
+  opacity: 0;
+}
+body.stamping .cutout-outline {
+  opacity: 1;
+  animation: scryball-etchIn 1.05s cubic-bezier(0.55, 0.05, 0.3, 0.95) forwards;
+}
+/* Once etched, lock at 0 so flashing/opening don't snap back. */
+body.stamping .cutout-outline,
+body.flashing .cutout-outline,
+body.opening  .cutout-outline {
+  stroke-dashoffset: 0;
+}
+body.flashing .cutout-outline {
+  opacity: 1;
+  animation: scryball-flashPulse 0.55s ease-out;
+}
+body.opening  .cutout-outline,
+body.diving   .cutout-outline,
+body.arriving .cutout-outline {
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+@keyframes scryball-etchIn {
+  from { stroke-dashoffset: 100; }
+  to   { stroke-dashoffset: 0;   }
+}
+@keyframes scryball-flashPulse {
+  0%   { filter: drop-shadow(0 0 4px  var(--flash-color, #e50000)) brightness(1); }
+  45%  { filter: drop-shadow(0 0 22px var(--flash-color, #e50000)) brightness(2); }
+  100% { filter: drop-shadow(0 0 5px  var(--flash-color, #e50000)) brightness(1); }
+}
+
+/* ---- Cutout interiors (the FLASH FILL) ---- */
+.cutout-interior {
+  fill: var(--flash-color, #e50000);
+  fill-rule: evenodd;
+  pointer-events: none;
+  opacity: 0;
+}
+body.flashing .cutout-interior {
+  opacity: 1;
+  animation: scryball-interiorFlash 0.55s ease-out;
+}
+body.opening  .cutout-interior,
+body.diving   .cutout-interior,
+body.arriving .cutout-interior {
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+@keyframes scryball-interiorFlash {
+  0%   { opacity: 0;    filter: brightness(2)   drop-shadow(0 0 6px  var(--flash-color, #e50000)); }
+  35%  { opacity: 1;    filter: brightness(1.6) drop-shadow(0 0 14px var(--flash-color, #e50000)); }
+  100% { opacity: 0.95; filter: brightness(1)   drop-shadow(0 0 4px  var(--flash-color, #e50000)); }
+}
+
+/* ================================================================
+   DIVE / ARRIVE / INSIDE — ball scaling + fade
+   ================================================================ */
+
+/* Dive: camera pushes into the ball, just enough to fill the viewport.
+   We don't overshoot — destination UI scales itself up in `arriving`. */
+body.diving .ball-wrap {
+  transform: scale(3.5);
+  transition: transform 0.85s cubic-bezier(0.55, 0, 0.85, 0.2);
+}
+/* Arriving: ball, at final size, melts away while results bubble up. */
+body.arriving .ball-wrap {
+  transform: scale(3.5);
+  opacity: 0;
+  transition: opacity 0.5s ease;
+}
+/* Hold scale + transparency through the class swap so we don't see the
+   ball pop back to size behind a still-fading entry. */
+body.inside .ball-wrap {
+  transform: scale(3.5);
+  opacity: 0;
+  transition: none;
+}
+/* During dive, the ball graphic itself fades so the camera appears to
+   push *through* it into the scrying space beyond. */
+body.diving .cueball-svg { opacity: 0; transition: opacity 0.7s ease 0.2s; }
