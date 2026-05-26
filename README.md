@@ -12,7 +12,7 @@ Inspired by *Homestuck* by Andrew Hussie.
 
 ### Hotfixes
 
-- None.
+- Hotfix 1: Missing Character Resource
 
 ### Past Updates
 

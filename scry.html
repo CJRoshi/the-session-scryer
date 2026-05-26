@@ -3365,7 +3365,13 @@ const App = () => {
   
   const [charactersRaw, setCharactersRaw] = useState(null);
   useEffect(() => {
-    fetch('../data/characters.json')
+    /* Post-split (Phase H): characters.json lives inside the Scryer's
+       own components/ folder so the repo is self-contained. The old
+       `../data/characters.json` path pointed up into the Connector's
+       data folder — fine while the Scryer was nested inside the
+       Connector, but it resolves to nowhere now that the Scryer is a
+       sibling repo (Sites/the-session-scryer ↔ Sites/the-classpect-connector). */
+    fetch('./components/characters.json')
       .then(r => r.json())
       .then(setCharactersRaw)
       .catch(err => console.warn('characters.json failed to load:', err));
