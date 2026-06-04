@@ -61,6 +61,24 @@
       --cc-link-hover-color: #6dd1f4;        /* hover, dark theme */
     }
     body { background-color: #1a1a1a; color: #eee; font-family: 'Courier New', monospace; }
+
+    /* iPad Safari fixes (Phase H): three related changes that all
+       address the same family of bugs around bg coverage + scroll
+       behavior on tablet/mobile.
+       (1) overscroll-behavior:none — kills the iOS bounce-scroll
+           that exposes the page above/below the painted bg.
+       (2) overflow-x:hidden — the pentagon SVG (1260px wide)
+           overflows .scrying-scene at narrower viewports (iPad
+           portrait); clip horizontal scroll so it doesn't show.
+       (3) body.inside bg switches from the entry-view dark grey
+           to a navy that matches the painted bg's general tone,
+           so any overscroll/edge reveal still reads as "in the
+           ball" rather than "behind the chrome." */
+    html, body {
+      overscroll-behavior: none;
+    }
+    body { overflow-x: hidden; }
+    body.inside { background-color: #0d1530; }
     .panel { background-color: #2a2a2a; border: 1px solid #444; border-radius: 6px; padding: 14px; }
     .panel h2 { font-weight: bold; margin-bottom: 8px; color: #6dd1f4; }
 
@@ -109,6 +127,29 @@
     }
     @media (max-width: 720px) {
       .entry-body { grid-template-columns: 1fr; }
+    }
+    /* Mobile entry-tabs: at desktop the tabs sit at fit-content with
+       22px horizontal padding and 1px letter-spacing — together
+       "TEXT ENTRY | GRAPH ENTRY | CODE ENTRY" runs ~400px wide,
+       which overflows narrow phones and gets clipped because the
+       .entry-tabs wrapper has overflow:hidden. Mobile fix:
+       - Force the wrapper to full available width (drop fit-content).
+       - Let tabs flex:1 1 0 to share the row evenly.
+       - Tighten padding + letter-spacing so even the longest label
+         ("GRAPH ENTRY") fits inside its slice without truncation. */
+    @media (max-width: 480px) {
+      .entry-tabs {
+        width: auto;
+        display: flex;
+      }
+      .entry-tab {
+        flex: 1 1 0;
+        padding: 8px 4px;
+        letter-spacing: 0.5px;
+        font-size: 12px;
+        text-align: center;
+        white-space: nowrap;
+      }
     }
     .entry-active-panel { min-width: 0; }   /* let textarea/grid shrink */
     .entry-active-panel .panel { overflow-x: auto; }
@@ -261,8 +302,16 @@
     }
     .inside-bg-layer {
       position: absolute;
-      top: -10vh; left: -10vw;
-      right: -10vw; bottom: -10vh;
+      /* Phase H bump: -10vh/-10vw was only enough overhead for tiny
+         parallax shifts. On long-scroll pages (HSOD-scale sessions,
+         iPad portrait with stacked stat cards), the fastest layer
+         (speed 0.40 × scrollY) easily exceeds 10vh of shift —
+         revealing the body bg at the edges. -50vh/-50vw gives the
+         layers ~5× the room so even multi-screen scrolls don't slide
+         the painted bg out of frame. background-size:cover scales the
+         image to the larger bounds; same image, just rendered bigger. */
+      top: -50vh; left: -50vw;
+      right: -50vw; bottom: -50vh;
       background-position: center center;
       background-size: cover;
       background-repeat: no-repeat;
@@ -756,6 +805,23 @@
     .ss-top-row .orb.o-tr {
       position: relative;
       top: -60px;
+    }
+    /* Phase H iPad-portrait fix: Phase F's outward UL/UR push (left: ±20)
+       and the top-row -60px lift only make geometric sense at the
+       full-desktop scene width (~1280 px). At iPad-portrait widths
+       (901–1100 px range, just above the 900 mobile-layout break),
+       the scene is squeezed but still using the desktop grid template,
+       which means orbs at the column edges already crowd the pentagon
+       — pushing them outward 20 more px is what produces the
+       "orbs overlap pentagon + horizontal scroll" symptom. Reset all
+       Phase F offsets to zero in this band so the orbs sit flush in
+       their columns. */
+    @media (min-width: 901px) and (max-width: 1100px) {
+      .orb.o-ul { left: 0; top: 0; }
+      .orb.o-ur { left: 0; top: 0; }
+      .ss-top-row .orb.o-tl,
+      .ss-top-row .orb.o-tr { top: 0; }
+      .orb.o-tc { top: 0; }
     }
 
     /* ===============================================================

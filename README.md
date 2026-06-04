@@ -14,6 +14,7 @@ Inspired by *Homestuck* by Andrew Hussie.
 
 - Hotfix 1: Missing Character Resource
 - Hotfix 2: Missing JS Resource
+- Hotfix 3: Minor Mobile Layout Bugs
 
 ### Past Updates
 

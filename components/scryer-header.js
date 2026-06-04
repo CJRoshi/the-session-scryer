@@ -69,9 +69,13 @@ const ScryerHeader = ({ children }) => {
     { label: 'About',     href: './about.html', local: true                                      },
   ];
 
+  /* Title style — font-size now lives in the embedded <style> below
+     (under .scryer-header-title) so a @media query can scale it down on
+     narrow viewports. Inline styles take precedence over external CSS,
+     so anything we want responsive has to come out of this object and
+     into the class-targeted rule. */
   const titleStyle = {
     fontFamily: "'Typostuck', 'Courier New', monospace",
-    fontSize: '2.25rem',
     fontWeight: 'normal',
     lineHeight: 1.1,
     color: textColor,
@@ -91,22 +95,48 @@ const ScryerHeader = ({ children }) => {
       position: 'relative',
       zIndex: 10
     }}>
+      {/* Mobile scaling rules. Rendered alongside the markup so the
+          component carries its own responsive behavior — every page
+          that mounts ScryerHeader (index, scry, about) gets these
+          rules automatically, no per-page CSS work needed.
+          - Title shrinks 2.25rem → 1.4rem at ≤480px so "The Session
+            Scryer" stops ellipsizing to "The Sessio..." on narrow
+            phones.
+          - Logo shrinks 72px → 48px at the same break so the chrome
+            stays proportional. */}
+      <style>{`
+        .scryer-header-title { font-size: 2.25rem; }
+        .scryer-header-logo  { width: 72px; height: 72px; }
+        /* Two-step shrink: intermediate (iPad portrait, narrow desktop)
+           uses a smaller title that still reads as the page brand;
+           full mobile (phones) drops further so the title fits beside
+           a small logo + hamburger. The first break also catches iPad
+           portrait at 1024 CSS px where the desktop layout was
+           ellipsizing "The Session Scryer" to "The Session Scr...". */
+        @media (max-width: 900px) {
+          .scryer-header-title { font-size: 1.75rem; }
+          .scryer-header-logo  { width: 56px; height: 56px; }
+        }
+        @media (max-width: 480px) {
+          .scryer-header-title { font-size: 1.4rem; }
+          .scryer-header-logo  { width: 48px; height: 48px; }
+        }
+      `}</style>
       <div className="flex items-center justify-between"
            style={{ maxWidth: '1200px', margin: '0 auto' }}>
         <div className="flex items-center" style={{ gap: '16px', minWidth: 0 }}>
           <a href="./index.html" style={{ cursor: 'pointer', flexShrink: 0 }}>
             <img
+              className="scryer-header-logo"
               src={logoSrc}
               alt="Scryer logo"
               style={{
-                width: '72px',
-                height: '72px',
                 imageRendering: 'pixelated',
                 display: 'block',
               }}
             />
           </a>
-          <a href="./index.html" style={titleStyle}>
+          <a href="./index.html" className="scryer-header-title" style={titleStyle}>
             The Session Scryer
           </a>
         </div>
