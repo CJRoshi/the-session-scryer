@@ -78,7 +78,18 @@
       overscroll-behavior: none;
     }
     body { overflow-x: hidden; }
-    body.inside { background-color: #0d1530; }
+    /* Phase H bg matching: the painted bg layers (PC-Interior-1..4 /
+       Mobile_Interior-1..4) are partially transparent — only layer 1
+       (atmospheric back) carries continuous coverage, and even that
+       gets shifted around by parallax. Wherever the painted detail
+       isn't covering, the body bg shows through (filtered by the 33%
+       black .bg-overlay above it).
+       Tuning the body color: #0d1530 was too light a navy — it read
+       as a visible "cutoff" stripe at the bottom of the page where
+       the layers had slid away. Dropping to near-black (#03070f)
+       blends almost invisibly with the painted layers' darkest tones,
+       so the "gap" between painted blobs is much harder to spot. */
+    body.inside { background-color: #03070f; }
     .panel { background-color: #2a2a2a; border: 1px solid #444; border-radius: 6px; padding: 14px; }
     .panel h2 { font-weight: bold; margin-bottom: 8px; color: #6dd1f4; }
 
@@ -806,23 +817,12 @@
       position: relative;
       top: -60px;
     }
-    /* Phase H iPad-portrait fix: Phase F's outward UL/UR push (left: ±20)
-       and the top-row -60px lift only make geometric sense at the
-       full-desktop scene width (~1280 px). At iPad-portrait widths
-       (901–1100 px range, just above the 900 mobile-layout break),
-       the scene is squeezed but still using the desktop grid template,
-       which means orbs at the column edges already crowd the pentagon
-       — pushing them outward 20 more px is what produces the
-       "orbs overlap pentagon + horizontal scroll" symptom. Reset all
-       Phase F offsets to zero in this band so the orbs sit flush in
-       their columns. */
-    @media (min-width: 901px) and (max-width: 1100px) {
-      .orb.o-ul { left: 0; top: 0; }
-      .orb.o-ur { left: 0; top: 0; }
-      .ss-top-row .orb.o-tl,
-      .ss-top-row .orb.o-tr { top: 0; }
-      .orb.o-tc { top: 0; }
-    }
+    /* Phase H intermediate-orb-reset retired: the mobile breakpoint
+       below (now 1280 px, was 900 px) covers the iPad-portrait band
+       directly with the full mobile layout, so the patch-fix to reset
+       Phase F orb offsets in the 901–1100 px range is no longer
+       needed. (Mobile layout already zeroes them as part of the 2×2
+       orb grid + blue-band layout swap.) */
 
     /* ===============================================================
        Inside-ball idle motion. Subtle floating bob for each
@@ -1521,7 +1521,13 @@
       letter-spacing: 0.2px;
     }
 
-    @media (max-width: 900px) {
+    /* Phase H bump: 900 → 1280. Catches iPad portrait (1024–1253 CSS px
+       on common iPads) which was using desktop layout and overflowing,
+       forcing the user to pinch-zoom out. 1280 is one px above
+       laptop-13 widths but below typical desktop windows; the wider
+       end stays on the wide layout, everything narrower (iPad portrait,
+       phones, ultra-narrow laptop windows) falls back to mobile. */
+    @media (max-width: 1280px) {
       .orb-hover-card,
       .player-hover-card {
         position: static;
@@ -1543,7 +1549,7 @@
       }
     }
 
-    @media (max-width: 900px) {
+    @media (max-width: 1280px) {
       .scrying-interior-pentagon { display: none; }
       .scrying-scene-has-pentagon > .scry-code-header,
       .scrying-scene-has-pentagon > .grid-toggles-above,

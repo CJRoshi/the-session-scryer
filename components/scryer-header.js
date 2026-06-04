@@ -107,13 +107,15 @@ const ScryerHeader = ({ children }) => {
       <style>{`
         .scryer-header-title { font-size: 2.25rem; }
         .scryer-header-logo  { width: 72px; height: 72px; }
-        /* Two-step shrink: intermediate (iPad portrait, narrow desktop)
+        /* Two-step shrink: intermediate (iPad portrait, narrow laptop)
            uses a smaller title that still reads as the page brand;
            full mobile (phones) drops further so the title fits beside
-           a small logo + hamburger. The first break also catches iPad
-           portrait at 1024 CSS px where the desktop layout was
-           ellipsizing "The Session Scryer" to "The Session Scr...". */
-        @media (max-width: 900px) {
+           a small logo + hamburger.
+           Phase H second pass: bumped the intermediate break from
+           900px to 1280px to match the scryer-scene's mobile-layout
+           breakpoint, since iPad portrait at 1024–1253 CSS px was
+           ellipsizing "The Session Scryer" to "The Session Scr..." */
+        @media (max-width: 1280px) {
           .scryer-header-title { font-size: 1.75rem; }
           .scryer-header-logo  { width: 56px; height: 56px; }
         }

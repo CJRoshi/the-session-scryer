@@ -36,5 +36,5 @@ It is as simple as entering a session in by any of three methods (graph, text pa
 │
 ├── components/                 # Shared React components
 │
-└──  images/                     # All static image assets
+└──  images/                    # All static image assets
 ```
