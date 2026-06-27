@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>The Session Scryer — A Classpect Connector tool</title>
-  <meta name="description" content="A web-based tool for analyzing Homestuck Sburb sessions composed of multiple classpects. Visualize leadership, lunar balance, game quality, and more — built as an extension of The Classpect Connector." />
+  <meta name="description" content="A web-based tool for analyzing Sburb sessions composed of multiple classpects. Built as an extension of The Classpect Connector." />
   <meta name="google-site-verification" content="BQSFPzxDWlPdcDSykRqWoS8VgurTZRkcibxx7ohbv4E" />
   <link rel="canonical" href="https://cjroshi.github.io/the-session-scryer/" />
 
@@ -13,12 +13,14 @@
        blank link. Mirrors the Connector's per-page meta pattern. -->
   <meta property="og:type" content="website" />
   <meta property="og:title" content="The Session Scryer" />
-  <meta property="og:description" content="Analyze Homestuck Sburb sessions: leadership, lunar balance, game quality, and more. A Classpect Connector tool." />
+  <meta property="og:description" content="A web-based tool for analyzing Sburb sessions composed of multiple classpects. Built as an extension of The Classpect Connector." />
   <meta property="og:url" content="https://cjroshi.github.io/the-session-scryer/" />
   <meta property="og:image" content="https://cjroshi.github.io/the-session-scryer/images/logos/ScryerLogoRegular.png" />
+  <meta property="og:site_name" content="The Session Scryer" />
   <meta name="twitter:card" content="summary" />
   <meta name="twitter:title" content="The Session Scryer" />
-  <meta name="twitter:description" content="Analyze Homestuck Sburb sessions: leadership, lunar balance, game quality, and more." />
+  <meta name="twitter:description" content="A web-based tool for analyzing Sburb sessions composed of multiple classpects. Built as an extension of The Classpect Connector." />
+  <meta name="twitter:image" content="https://cjroshi.github.io/the-session-scryer/images/logos/ScryerLogoRegular.png" />
 
   <!-- =====================================================================
        Phase G: deep-link compatibility bridge.
@@ -40,9 +42,12 @@
     })();
   </script>
 
-  <!-- Favicon — same blue-only ScryerLogoBright variant scry.html uses, so
-       browser tabs read consistently across Home and the app. -->
-  <link rel="icon" type="image/png" href="./images/logos/ScryerLogoBright.png" />
+  <!-- Favicon — standardized on ScryerLogoRegular across all Scryer
+       pages (Home, scry, about) so browser tabs read consistently and
+       og:image / twitter:image embed previews match what users see in
+       the tab. ScryerLogoBright and ScryerLogoDark stay in the assets
+       folder for in-page use where they fit better. -->
+  <link rel="icon" type="image/png" href="./images/logos/ScryerLogoRegular.png" />
 
   <!-- React 18 + Babel + Tailwind (matches scry.html so the shared
        ScryerHeader / ScryerFooter components compile the same way). -->
