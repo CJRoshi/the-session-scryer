@@ -8,18 +8,18 @@ Inspired by *Homestuck* by Andrew Hussie.
 
 ## Most Recent Update
 
-- Initial Release
+Prediction Schmonviction (6/27/2026)
+
+- Added Influencers and BC Predictions
+- Added sitemap
 
 ### Hotfixes
 
-- Hotfix 1: Missing Character Resource
-- Hotfix 2: Missing JS Resource
-- Hotfix 3: Minor Mobile Layout Bugs
-- Hotfix 4: Script Version Hotfix
+- None so far...
 
 ### Past Updates
 
-- None.
+- Initial Release
 
 ## What It Does
 

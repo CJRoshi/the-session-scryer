@@ -925,7 +925,7 @@ const SPECIAL_SESSIONS = {
     members: [
       { characterKey: 'Aonara Kruxit', moon: 'Derse',   symbol: './images/special/symbols/oc/taurmini.png',    name: null },
       { characterKey: 'Vérité Agtier', moon: 'Prospit', symbol: './images/special/symbols/oc/virus.png',       name: null },
-      { characterKey: 'Thorn Derosin', moon: 'Dual',    symbol: './images/special/symbols/oc/Thorn_Symbol.png', name: 'Thorn / Ebony' },  // shared slot — display as "Thorn / Ebony"
+      { characterKey: 'Thorn Derosin', moon: 'Dual',    symbol: './images/special/symbols/oc/Thorn_Symbol.png', name: 'Thorn / Ebony Derosin' },  // shared slot — display as "Thorn / Ebony"
       { characterKey: 'Dawn Westwood', moon: 'Prospit', symbol: './images/special/symbols/oc/Dawn_Symbol.png', name: null },
       { characterKey: 'Nunki Aerwynn', moon: 'Derse',   symbol: './images/special/symbols/oc/Nunki_Symbol.png', name: null },
       { characterKey: 'Jace Ferreiro', moon: 'Derse',   symbol: './images/special/symbols/oc/Jace_Symbol.png', name: null },
@@ -1293,7 +1293,7 @@ const OOPS_CLASS_PLURALS = {
    in scry.html's SPECIAL_DIVE.
    ========================================================================= */
 SPECIAL_SESSIONS['hsod'] = (function buildHsodEntry() {
-  const code = '1621C22112222412422522622712912A02B12C12C13223423513623723923923923A03A23B04124704914A15105215315425525625725815825915B15B25C16126216226316426516716826916B26C27117327417417727917927C18118418518728A28B28C29129219429809919B09C1A12A22A32A42A51A71AB2AC1B22B30B42B62B80B91BC1C21C32C41C52CA2CB2D12D22D32D41D51D71D91DB2DC1E20E90EA1EC0';
+  const code = '1621C22112222412422522622712912A02B12C12C13223423513623723923923923A03A23B04124704914A15105215315425525625725815825915B15B25C16126216226316426516716826916B26C27117327417417727917927C18118418518728A28B28C29129219429809919B09C1A12A22A32A42A51A71AB2AC1B22B30B42B62B80B91BC1C21C32C41C52C92CA2CB2D12D22D32D41D51D71D91DB2DC1E20E90EA1EC0';
   const decoded = decodeSession(code);
   if (decoded.errors && decoded.errors.length > 0) {
     console.warn('[special-sessions] HSOD code failed to decode cleanly:', decoded.errors);
@@ -1307,11 +1307,6 @@ SPECIAL_SESSIONS['hsod'] = (function buildHsodEntry() {
   return {
     id:          'hsod',
     displayName: 'HSOD',
-    /* Both alias forms registered: the user-facing secrets-page string
-       (dashed, all-caps, the form people will actually type) and the
-       compact undashed form for anyone copy-pasting from URL bars or
-       elsewhere. specialSessionByAlias is exact-match on the trimmed
-       input, so each form must appear here explicitly. */
     aliases:     [
       'A3-67-CH-1K-FQ-22-94-R1-B8-JK-3G-XW',
       'A367CH1KFQ2294R1B8JK3GXW',
@@ -1328,22 +1323,233 @@ SPECIAL_SESSIONS['hsod'] = (function buildHsodEntry() {
       closestKnit: null, leader: null,
       lunarProspit: null, lunarDerse: null,
     },
-    phantomMembers: [
-      {
-        x: 2, y: 0,
-        label: 'Magician of All',
-        moon: 'Derse',
-        card: {
-          leadership: { score: -2, side: 'Explicit' },
-          /* Aspect-word color in the card title. "All" isn't in
-             ASPECT_LINK_COLORS (it's a homebrew super-aspect), so the
-             card defaults to white; #999999 grays it down so it reads
-             as "neutral / off-the-axis" rather than "missing data". */
-          titleAspectColor: '#999999',
-        },
-      },
-    ],
   };
+})();
+
+/* =========================================================================
+   THE INFLUENCERS
+   The four Beyond Canon influencers with confirmed classpects (per the
+   Connector's characters.json). Dive uses the Life glyph in Silas's
+   green (#71d666).
+   ========================================================================= */
+SPECIAL_SESSIONS['influencers'] = (function buildInfluencersEntry() {
+  /* Members defined inline rather than fetched from characters.json so
+     the entry is self-contained at module load. Order in players[]
+     doesn't matter — encodeSession sorts before encoding. */
+  const players = [
+    { class: 'Witch',  aspect: 'Light', moon: 'Dual' },  // Imode Kurita
+    { class: 'Mage',   aspect: 'Life',  moon: 'Dual' },  // Silas P. Beauregarde
+    { class: 'Rogue',  aspect: 'Space', moon: 'Dual' },  // Avril Thorpe
+    { class: 'Prince', aspect: 'Time',  moon: 'Dual' },  // Ruthie Gold
+  ];
+  const code = encodeSession(players);
+  return {
+    id:          'influencers',
+    displayName: 'The Influencers',
+    aliases:     ['INFLUENCERS', 'THEINFLUENCERS', 'BCINFLUENCERS', 'BC INFLUENCERS'],
+    code,
+    description: 'There are other stories to be told...',
+    flavor:      null,
+    theme:       { bg: null, accent: null, border: null, fontTitle: null },
+    members: [
+      { characterKey: 'Imode Kurita',         moon: 'Dual', symbol: null, name: null },
+      { characterKey: 'Silas P. Beauregarde', moon: 'Dual', symbol: null, name: null },
+      { characterKey: 'Avril Thorpe',         moon: 'Dual', symbol: null, name: null },
+      { characterKey: 'Ruthie Gold',          moon: 'Dual', symbol: null, name: null },
+    ],
+    assets:      { bannerArt: null, gridBackground: null, layerOrbOverride: null, needs: [] },
+    quips:       {
+      balance: {
+        speaker: "Ruthie Gold",
+        orb: "activeee",
+        quip: "i don't know why weee'reee doing this but i gueeess weee'reee activeee."
+      },
+      avatar: {
+        speaker: "Avril Thorpe",
+        orb: "mage of rage #fierce",
+        quip: "i don't actually know what to make of this. same #aspect as the clown guy. come to think of it, didn't he kickstart our adventure? #thinking #thoughts"
+      }, 
+      repRung: {
+        speaker: "Ruthie Gold",
+        orb: "the clock",
+        quip: "theee war starteeed knocking only a feeew hours after theee reeest of theeeseee guys posteeed about it."
+      }, 
+      essence: {
+        speaker: "Silas P. Beauregarde",
+        orb: "Neither/nor, importance-ways.",
+        quip: "I guess what we did was important. I just don't know if WE matter after all of that, y'know?"
+      },
+      discord: {
+        speaker: "Imode Kurita",
+        orb: "⚔️⚔️⚔️",
+        quip: "OK Ruthie ➕ Silas are very ⚔️⚔️⚔️ and it's like 🙄. I'm here with 🎸 I guess."
+      }, 
+      gameQuality: {
+        speaker: "Imode Kurita",
+        orb: "😑",
+        quip: "I want you to 👀↩️ and 🗣️ if you think this is 👍, because to me, it's 💔."
+      }, 
+      oddest: {
+        lines: [
+          {speaker: null, text: "[Rogue of Space]"},
+          {speaker: "Avril Thorpe", text: "i mean, true. #imnothinglikeyall"},
+          {speaker: "Avril Thorpe", text: "seriously, though, it's like i'm invisible sometimes."}
+        ]
+      },
+      closestKnit: {
+        lines: [
+          {speaker: null, text: "[Mage of Life]"},
+          {speaker: "Silas P. Beauregarde", text: "I guess that'd be me! No shock there, with all my socialite ways..."},
+          {speaker: "Ruthie Gold", text: "you don't haveee thoseee"},
+          {speaker: "Silas P. Beauregarde", text: "Shush!"}
+        ]
+      }, 
+      leader: {
+        orb:null,
+        lines: [
+          {speaker: "Ruthie Gold", text: "i meeean i gaveee likeee oneee ordeeer. but it was a good oneee."},
+        ]
+      },
+      lunarProspit: null, 
+      lunarDerse: null,
+    },
+  };
+})();
+
+/* =========================================================================
+   BC PREDICTIONS — Gamma Kids + Delta Kids (combined)
+   -------------------------------------------------------------------------
+   Speculative classpect predictions for HS:BC's Deltritus session,
+   pulled at runtime from the Connector's predictions.html data file
+   (data/predictions.json). One combined 10-member session: 4 Gamma
+   Kids (offspring of the original cast) + 6 Delta Kids (Deltritus
+   natives).
+   ========================================================================= */
+SPECIAL_SESSIONS['bc-predictions'] = (function buildBcPredictionsStub() {
+  /* Mutable holder. Aliases registered up-front; members + code
+     populated when the fetch resolves below. */
+  const entry = {
+    id:          'bc-predictions',
+    displayName: 'BC Predictions',
+    aliases:     [
+      'BCMETA',
+      'MYBCMETAS',
+      'PREDICTIONS',
+      'BCPREDICTIONS',
+      'DELTRITUS',
+      'GAMMADELTA',
+      'GAMMAKIDS',
+      'DELTAKIDS',
+      'GDSESSION',
+      'GAMMAANDDELTA',
+    ],
+    code:        '',  // populated post-fetch
+    description: 'Speculative Deltritus session — Gamma + Delta Kids.',
+    flavor:      null,
+    theme:       { bg: null, accent: null, border: null, fontTitle: null },
+    members:     [],  // populated post-fetch
+    assets:      { bannerArt: null, gridBackground: null, layerOrbOverride: null, needs: [] },
+    quips:       {
+      balance: null, avatar: null, repRung: null, essence: null,
+      discord: null, gameQuality: null, oddest: null,
+      closestKnit: null, leader: null,
+      lunarProspit: null, lunarDerse: null,
+    },
+    /* Marker so debug/console probing can tell async entries from
+       sync ones at a glance. Not consumed by any production code. */
+    _async:      true,
+    _loaded:     false,
+  };
+
+  /* Connector root URL + predictions.json URL. */
+  const CONNECTOR_ROOT = (function () {
+    if (typeof window === 'undefined' || !window.location) {
+      return '/the-classpect-connector/';
+    }
+    return window.location.origin + '/the-classpect-connector/';
+  })();
+  const PREDICTIONS_URL = CONNECTOR_ROOT + 'data/predictions.json';
+
+  /* Symbol paths */
+  const rewriteSymbolPath = p => {
+    if (typeof p !== 'string') return p;
+    if (p.startsWith('../')) return CONNECTOR_ROOT + p.slice(3);
+    return p;
+  };
+
+  /* Fetch + populate. Runs at module-load. Errors are logged and
+     swallowed — a missing predictions file shouldn't crash the rest of
+     the Scryer; the entry just stays as a stub with empty members. */
+  if (typeof fetch === 'function') {
+    fetch(PREDICTIONS_URL)
+      .then(r => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      })
+      .then(data => {
+        const gamma = Array.isArray(data.gammaKids) ? data.gammaKids : [];
+        const delta = Array.isArray(data.deltaKids) ? data.deltaKids : [];
+        const all   = gamma.concat(delta);
+        if (all.length === 0) {
+          console.warn('[special-sessions] bc-predictions: predictions.json had no characters');
+          return;
+        }
+
+        const fallbackMoon = 'Dual';
+        const validMoons = new Set(['Prospit', 'Derse', 'Dual']);
+        const resolveMoon = c => {
+          const m = c && c.moon;
+          return (m && validMoons.has(m)) ? m : fallbackMoon;
+        };
+        const players = all.map(c => ({
+          class:  c.classpect[0],
+          aspect: c.classpect[1],
+          moon:   resolveMoon(c),
+        }));
+        /* Each member also stores its own classpect tuple. */
+        const members = all.map(c => ({
+          characterKey: c.name,
+          moon:         resolveMoon(c),
+          symbol:       rewriteSymbolPath(c.symbol) || null,
+          name:         c.name,
+          color:        c.color || null,
+          classpect:    [c.classpect[0], c.classpect[1]],
+        }));
+
+        const code = encodeSession(players);
+
+        /* Mutate the entry in place. ALIAS_INDEX already points at
+           this object, so the alias-resolve path picks up the new
+           members automatically. */
+        entry.code    = code;
+        entry.members = members;
+        entry._loaded = true;
+
+        if (typeof CODE_INDEX !== 'undefined' && CODE_INDEX && typeof CODE_INDEX.set === 'function') {
+          CODE_INDEX.set(code, entry);
+        }
+
+        /* Fire a custom event so any code that already tried (and
+           failed) to deep-link into BC Predictions before the fetch
+           resolved can re-attempt. scry.html's hash bridge listens
+           for this and re-runs the deep-link decode if the current
+           hash still matches a BC-predictions alias. Without it,
+           someone landing on scry.html#BCPREDICTIONS on a slow
+           connection would silently fall through to the entry view. */
+        if (typeof window !== 'undefined' && typeof CustomEvent === 'function') {
+          try {
+            window.dispatchEvent(new CustomEvent('special-session-loaded', {
+              detail: { id: 'bc-predictions', code, members },
+            }));
+          } catch (_) { /* sandboxed envs: ignore */ }
+        }
+      })
+      .catch(err => {
+        console.warn('[special-sessions] bc-predictions fetch failed:', err);
+      });
+  }
+
+  return entry;
 })();
 
 /* Expose the class→aspect mapping on window so scry.html can build

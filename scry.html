@@ -3,8 +3,18 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>The Session Scryer</title>
-  <meta name="robots" content="noindex" />
+  <title>Scry a Session — The Session Scryer</title>
+  <meta name="description" content="Enter a Homestuck Sburb session by text, graph, or session code, and the Scryer will reveal leadership rankings, lunar balance, representative classpect, and more." />
+  <link rel="canonical" href="https://cjroshi.github.io/the-session-scryer/scry.html" />
+
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Scry a Session — The Session Scryer" />
+  <meta property="og:description" content="Enter a Sburb session and get stats on leadership, lunar balance, and game quality." />
+  <meta property="og:url" content="https://cjroshi.github.io/the-session-scryer/scry.html" />
+  <meta property="og:image" content="https://cjroshi.github.io/the-session-scryer/images/logos/ScryerLogoBright.png" />
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="Scry a Session" />
+  <meta name="twitter:description" content="Reveal leadership, lunar balance, and game quality for any Sburb session." />
 
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="./images/logos/ScryerLogoRegular.png" />
@@ -1786,6 +1796,19 @@ const SPECIAL_DIVE = {
      this session are still pending — entry will deep-link once
      special-sessions.js gets a non-empty member list. */
   'hsod':         { shape: 'doom',  flashColor: '#4ce24e' },
+
+  /* The Influencers — Life glyph in Silas's exact character green
+     (#71d666). Per user spec: Silas is Mage of Life, his color reads
+     as "Life-ish" enough to double as the dive tint, and it lets the
+     four-character cueball flash feel thematically anchored to the
+     session's most visually-coded member. */
+  'influencers':  { shape: 'life',  flashColor: '#71d666' },
+
+  /* BC Predictions — Sburb house logo in Dirk's orange (#ff8000) per
+     user spec. Reads as "this is Dirk's session" (Deltritus IS his
+     planet) and the house logo nods to the literal Sburb-game framing
+     of any classpect prediction. */
+  'bc-predictions': { shape: 'sburb', flashColor: '#ff8000' },
 };
 
 /* =========================================================================
@@ -3466,9 +3489,31 @@ const App = () => {
     if (!specialContext || !Array.isArray(specialContext.members)) return charLookup;
     const out = { ...charLookup };
     for (const m of specialContext.members) {
-      if (!m.color) continue;
       const base = charLookup[m.characterKey];
-      out[m.characterKey] = base ? { ...base, color: m.color } : { color: m.color };
+      if (base) {
+        /* Real character (in characters.json) — overlay color override
+           if the special-session entry sets one, otherwise leave base
+           untouched. */
+        if (m.color) out[m.characterKey] = { ...base, color: m.color };
+        continue;
+      }
+      /* Special-session member NOT in characters.json (BC predictions
+         characters today, potentially others later). Synthesize a
+         minimal record from the member's own fields so downstream
+         display code (per-player card, leader ranking, grid hover)
+         which reads cd.classpect / cd.color / cd.symbol / cd.name still
+         resolves. HSOD's anonymous slots intentionally omit
+         `classpect` on the member, so they don't get a synthesized
+         record here and continue to fall back to the generic
+         "Class of Aspect" link in the leader ranking. */
+      if (m.classpect || m.color || m.symbol || m.name) {
+        out[m.characterKey] = {
+          name:      m.name      || m.characterKey,
+          color:     m.color     || null,
+          symbol:    m.symbol    || null,
+          classpect: Array.isArray(m.classpect) ? m.classpect : null,
+        };
+      }
     }
     return out;
   }, [charLookup, specialContext]);
@@ -3817,26 +3862,49 @@ const App = () => {
   }, [frame]);
 
   useEffect(() => {
-    const rawHash = (window.location.hash || '').replace(/^#/, '');
-    if (!rawHash || rawHash === 'inside') return;
+    /* Shared resolver: read the hash, try alias → code, decode, dive
+       into inside-view if it produced players. Used at mount AND when
+       an async special session (BC Predictions) finishes loading. */
+    const attemptDeepLink = (cleanOnFailure) => {
+      const rawHash = (window.location.hash || '').replace(/^#/, '');
+      if (!rawHash || rawHash === 'inside') return false;
 
-    const alias = (typeof specialSessionByAlias === 'function')
-      ? specialSessionByAlias(rawHash)
-      : null;
-    const effectiveCode = alias ? alias.code : rawHash;
+      const alias = (typeof specialSessionByAlias === 'function')
+        ? specialSessionByAlias(rawHash)
+        : null;
+      const effectiveCode = alias ? alias.code : rawHash;
 
-    const result = decodeSession(effectiveCode);
-    if (result.players.length > 0) {
-      lastEditor.current = 'code';
-      setSession(result.players);
-      setFrame('inside');
-    } else {
-      // Invalid deep link — clean the URL so a refresh doesn't loop the
-      // same failed decode, and let the user fall through to entry.
-      try {
-        window.history.replaceState(null, '',
-          window.location.pathname + window.location.search);
-      } catch (_) { /* ignore */ }
+      const result = decodeSession(effectiveCode);
+      if (result.players.length > 0) {
+        lastEditor.current = 'code';
+        setSession(result.players);
+        setFrame('inside');
+        return true;
+      }
+      if (cleanOnFailure) {
+        try {
+          window.history.replaceState(null, '',
+            window.location.pathname + window.location.search);
+        } catch (_) { /* ignore */ }
+      }
+      return false;
+    };
+
+    /* First pass at mount. Clean the URL on failure so a refresh
+       doesn't loop the same broken decode. */
+    const succeeded = attemptDeepLink(true);
+
+    /* Second-chance retry hook for async-loaded special sessions
+       (e.g. BC Predictions, whose members + code only exist after
+       the cross-repo predictions.json fetch resolves). Listen for
+       the 'special-session-loaded' event special-sessions.js fires
+       and re-attempt the decode if the user is still parked on the
+       same hash. Skip URL-cleanup here since the mount-time pass
+       already handled that. */
+    if (!succeeded) {
+      const onLoaded = () => { attemptDeepLink(false); };
+      window.addEventListener('special-session-loaded', onLoaded);
+      return () => window.removeEventListener('special-session-loaded', onLoaded);
     }
   }, []);
 
