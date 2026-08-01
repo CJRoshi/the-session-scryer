@@ -1399,7 +1399,7 @@ SPECIAL_SESSIONS['influencers'] = (function buildInfluencersEntry() {
       closestKnit: {
         lines: [
           {speaker: null, text: "[Mage of Life]"},
-          {speaker: "Silas P. Beauregarde", text: "I guess that'd be me! No shock there, with all my socialite ways..."},
+          {speaker: "Silas P. Beauregard", text: "I guess that'd be me! No shock there, with all my socialite ways..."},
           {speaker: "Ruthie Gold", text: "you don't haveee thoseee"},
           {speaker: "Silas P. Beauregard", text: "Shush!"}
         ]
