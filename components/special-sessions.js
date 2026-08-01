@@ -1338,7 +1338,7 @@ SPECIAL_SESSIONS['influencers'] = (function buildInfluencersEntry() {
      doesn't matter — encodeSession sorts before encoding. */
   const players = [
     { class: 'Witch',  aspect: 'Light', moon: 'Dual' },  // Imode Kurita
-    { class: 'Mage',   aspect: 'Life',  moon: 'Dual' },  // Silas P. Beauregarde
+    { class: 'Mage',   aspect: 'Life',  moon: 'Dual' },  // Silas P. Beauregard
     { class: 'Rogue',  aspect: 'Space', moon: 'Dual' },  // Avril Thorpe
     { class: 'Prince', aspect: 'Time',  moon: 'Dual' },  // Ruthie Gold
   ];
@@ -1353,7 +1353,7 @@ SPECIAL_SESSIONS['influencers'] = (function buildInfluencersEntry() {
     theme:       { bg: null, accent: null, border: null, fontTitle: null },
     members: [
       { characterKey: 'Imode Kurita',         moon: 'Dual', symbol: null, name: null },
-      { characterKey: 'Silas P. Beauregarde', moon: 'Dual', symbol: null, name: null },
+      { characterKey: 'Silas P. Beauregard', moon: 'Dual', symbol: null, name: null },
       { characterKey: 'Avril Thorpe',         moon: 'Dual', symbol: null, name: null },
       { characterKey: 'Ruthie Gold',          moon: 'Dual', symbol: null, name: null },
     ],
@@ -1375,7 +1375,7 @@ SPECIAL_SESSIONS['influencers'] = (function buildInfluencersEntry() {
         quip: "theee war starteeed knocking only a feeew hours after theee reeest of theeeseee guys posteeed about it."
       }, 
       essence: {
-        speaker: "Silas P. Beauregarde",
+        speaker: "Silas P. Beauregard",
         orb: "Neither/nor, importance-ways.",
         quip: "I guess what we did was important. I just don't know if WE matter after all of that, y'know?"
       },
@@ -1401,7 +1401,7 @@ SPECIAL_SESSIONS['influencers'] = (function buildInfluencersEntry() {
           {speaker: null, text: "[Mage of Life]"},
           {speaker: "Silas P. Beauregarde", text: "I guess that'd be me! No shock there, with all my socialite ways..."},
           {speaker: "Ruthie Gold", text: "you don't haveee thoseee"},
-          {speaker: "Silas P. Beauregarde", text: "Shush!"}
+          {speaker: "Silas P. Beauregard", text: "Shush!"}
         ]
       }, 
       leader: {
