@@ -1806,11 +1806,12 @@ const SPECIAL_DIVE = {
      session's most visually-coded member. */
   'influencers':  { shape: 'life',  flashColor: '#71d666' },
 
-  /* BC Predictions — Sburb house logo in Dirk's orange (#ff8000) per
-     user spec. Reads as "this is Dirk's session" (Deltritus IS his
-     planet) and the house logo nods to the literal Sburb-game framing
-     of any classpect prediction. */
-  'bc-predictions': { shape: 'sburb', flashColor: '#ff8000' },
+  /* BC Predictions — the SHURB logo (Sburb variant used in the
+     Deltritus session), colored in its native SHURB blue (~#14c8f5,
+     eyeball estimate — refine if the source has a different hex).
+     Shape is traced from shurb.png via tools/trace_symbol.py and
+     registered in scrying-ball.js as 'shurb' (12 subpaths). */
+  'bc-predictions': { shape: 'shurb', flashColor: '#14c8f5' },
 };
 
 /* =========================================================================

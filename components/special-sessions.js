@@ -1448,7 +1448,7 @@ SPECIAL_SESSIONS['bc-predictions'] = (function buildBcPredictionsStub() {
     flavor:      null,
     theme:       { bg: null, accent: null, border: null, fontTitle: null },
     members:     [],  // populated post-fetch
-    assets:      { bannerArt: null, gridBackground: null, layerOrbOverride: null, needs: [] },
+    assets:      { bannerArt: null, gridBackground: null, layerOrbOverride: './images/rungs-layers/shurb.png', needs: [] },
     quips:       {
       balance: null, avatar: null, repRung: null, essence: null,
       discord: null, gameQuality: null, oddest: null,
