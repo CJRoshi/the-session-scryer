@@ -177,14 +177,25 @@
    fit the smaller canvas. Phone viewports otherwise ended up with a
    near-full-screen header and glyph min > 1/3 of the arena width. */
 const NKP_MOBILE_BREAKPOINT   = 640; // viewport px below this → mobile tuning
-function nkpLayout(viewportW) {
+function nkpLayout(viewportW, memberCount) {
   const mobile = viewportW < NKP_MOBILE_BREAKPOINT;
+  // Density tiers — huge sessions (HSOD's 90+ member roster on a
+  // portrait phone, for example) get their glyph floor + pack fraction
+  // scaled down so bodies stop overlapping the whole arena.
+  const veryLarge = memberCount >= 60;
+  const large     = memberCount >= 30;
+  const sizeMin =
+    mobile ? (veryLarge ? 28 : large ? 40 : 48)
+           : (veryLarge ? 52 : large ? 68 : 80);
+  const packFrac =
+    mobile ? (veryLarge ? 0.20 : large ? 0.24 : 0.28)
+           : (veryLarge ? 0.18 : large ? 0.20 : 0.22);
   return {
     padSides: mobile ? 12 : 40,   // arena inset left/right/bottom
     padTop:   mobile ? 64 : 90,   // arena inset top (clears the header)
-    sizeMin:  mobile ? 48 : 80,   // glyph floor
-    sizeMax:  mobile ? 180 : 340, // glyph ceiling
-    packFrac: mobile ? 0.28 : 0.22, // total-glyph-area ÷ arena-area
+    sizeMin,
+    sizeMax: mobile ? 180 : 340,  // glyph ceiling
+    packFrac,
   };
 }
 const NKP_SIZE_JITTER         = 0.15; // ±15% per-glyph size variation
@@ -318,12 +329,27 @@ const NkpApp = () => {
     w: window.innerWidth, h: window.innerHeight,
   }));
   React.useEffect(() => {
-    const onResize = () => setViewport({ w: window.innerWidth, h: window.innerHeight });
-    window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
+    // Debounced resize handler.
+    let raf = null;
+    const onResize = () => {
+      if (raf) cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        setViewport({ w: window.innerWidth, h: window.innerHeight });
+        raf = null;
+      });
+    };
+    window.addEventListener('resize',            onResize);
+    window.addEventListener('orientationchange', onResize);
+    return () => {
+      if (raf) cancelAnimationFrame(raf);
+      window.removeEventListener('resize',            onResize);
+      window.removeEventListener('orientationchange', onResize);
+    };
   }, []);
 
-  const layout = nkpLayout(viewport.w);
+  // Layout tiers depend on member count too now, so dense sessions
+  // (HSOD's 90+) get a smaller glyph floor and lower pack fraction.
+  const layout = nkpLayout(viewport.w, decoded.players.length);
   const arenaX = layout.padSides;
   const arenaY = layout.padTop;
   const arenaW = Math.max(180, viewport.w - layout.padSides * 2);
