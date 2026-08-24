@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Settings — The Session Scryer</title>
+  <meta name="description" content="Sitewide settings for The Session Scryer — session-grid label styles, and more to come." />
+  <link rel="canonical" href="https://cjroshi.github.io/the-session-scryer/settings.html" />
+
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Settings — The Session Scryer" />
+  <meta property="og:description" content="Sitewide settings for The Session Scryer." />
+  <meta property="og:url" content="https://cjroshi.github.io/the-session-scryer/settings.html" />
+  <meta property="og:image" content="https://cjroshi.github.io/the-session-scryer/images/logos/ScryerLogoRegular.png" />
+  <meta property="og:site_name" content="The Session Scryer" />
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="Settings — The Session Scryer" />
+  <meta name="twitter:description" content="Sitewide settings for The Session Scryer." />
+  <meta name="twitter:image" content="https://cjroshi.github.io/the-session-scryer/images/logos/ScryerLogoRegular.png" />
+
+  <link rel="icon" type="image/png" href="./images/logos/ScryerLogoRegular.png" />
+
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.development.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.24.7/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com/3.4.16"></script>
+
+  <style>
+    @font-face {
+      font-family: 'Typostuck';
+      src: url('./fonts/TYPOSTUCK.ttf') format('truetype');
+      font-display: swap;
+    }
+    body {
+      background-color: #1a1a1a;
+      color: #eee;
+      font-family: 'Courier New', monospace;
+      margin: 0;
+    }
+    .settings-container {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 48px 24px 32px;
+    }
+    .settings-title {
+      font-family: 'Typostuck', 'Courier New', monospace;
+      font-size: 2.5rem;
+      line-height: 1.05;
+      color: #f4f4f4;
+      text-align: center;
+      margin: 0 0 12px;
+    }
+    .settings-subtitle {
+      text-align: center;
+      color: #999;
+      font-style: italic;
+      margin: 0 0 32px;
+      font-size: 0.9rem;
+    }
+    .section-heading {
+      font-family: 'Typostuck', 'Courier New', monospace;
+      font-size: 1.6rem;
+      color: #f4f4f4;
+      margin: 24px 0 8px;
+    }
+    .subsection-heading {
+      font-family: 'Courier New', monospace;
+      font-size: 0.9rem;
+      color: #a0a0a0;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      margin: 18px 0 6px;
+      padding-bottom: 4px;
+      border-bottom: 1px solid rgba(255,255,255,0.10);
+    }
+    .section-note {
+      color: #888;
+      font-size: 0.85rem;
+      margin-bottom: 12px;
+      font-style: italic;
+    }
+    .setting-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 16px;
+      padding: 14px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+    .setting-row:last-child { border-bottom: none; }
+    .setting-label-block { flex: 1 1 auto; min-width: 0; }
+    .setting-label { font-weight: bold; font-size: 0.95rem; margin-bottom: 4px; color: #f0f0f0; }
+    .setting-desc {
+      font-size: 0.8rem;
+      color: #999;
+      line-height: 1.45;
+    }
+    .setting-control {
+      flex-shrink: 0;
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+    .segmented {
+      display: inline-flex;
+      border: 1px solid #555;
+      border-radius: 4px;
+      overflow: hidden;
+      background: #2a2a2a;
+    }
+    .segmented button {
+      background: transparent;
+      border: none;
+      padding: 6px 14px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.85rem;
+      cursor: pointer;
+      color: #ccc;
+      transition: background 0.12s, color 0.12s;
+    }
+    .segmented button + button { border-left: 1px solid #555; }
+    .segmented button:hover { background: #333; }
+    .segmented button.active {
+      background: #6dd1f4;
+      color: #101820;
+      font-weight: bold;
+    }
+    .divider {
+      border: none;
+      border-top: 1px solid rgba(255,255,255,0.12);
+      margin: 24px 0;
+    }
+
+    /* Mobile — the segmented control's 4-button rows overflowed
+       the phone viewport and squeezed the label column to a single
+       character wide. Stack the label ABOVE the control (like the
+       Connector's settings do) so the label gets full-width, then
+       switch the control from single-row to a 2-column grid so
+       4-option rows become 2×2, 3-option rows become 2+1, 5-option
+       rows become 2×2+1. Border-left rules are recomputed via
+       nth-child so the grid keeps the connected-pill appearance. */
+    @media (max-width: 640px) {
+      .setting-row {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+      }
+      .setting-control {
+        width: 100%;
+        justify-content: flex-start;
+      }
+      .segmented {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        width: 100%;
+      }
+      /* Kill the horizontal-neighbor left border first, then re-add
+         it only for the RIGHT column so the internal divider still
+         reads correctly in the grid layout. */
+      .segmented button + button { border-left: none; }
+      .segmented button:nth-child(even) {
+        border-left: 1px solid #555;
+      }
+      /* Any button on row 2+ gets a top divider. */
+      .segmented button:nth-child(n+3) {
+        border-top: 1px solid #555;
+      }
+    }
+  </style>
+</head>
+
+<body>
+<div id="root"></div>
+
+<script type="text/babel" src="./components/settings.js"></script>
+<script type="text/babel" src="./components/session-constants.js"></script>
+<script type="text/babel" src="./components/classpect-glyph.js"></script>
+<script type="text/babel" src="./components/scryer-header.js"></script>
+<script type="text/babel" src="./components/scryer-footer.js"></script>
+
+<script type="text/babel">
+  const { ScryerHeader, ScryerFooter } = window;
+
+  const EnumSetting = ({ name, spec }) => {
+    const [value, setValue] = React.useState(() => ScryerSettings.get(name));
+    const handle = (v) => {
+      ScryerSettings.set(name, v);
+      setValue(v);
+    };
+    // Optional per-value display overrides:
+    //   `valueLabels[v]` — human-friendly button caption (fallback: v)
+    //   `valueStyles[v]` — CSS style object applied to that button
+    //                      (used for the substanceFont picker so each
+    //                      option previews its own font family)
+    return (
+      <div className="setting-row">
+        <div className="setting-label-block">
+          <div className="setting-label">{spec.label}</div>
+          <div className="setting-desc">{spec.description}</div>
+        </div>
+        <div className="setting-control">
+          <div className="segmented">
+            {spec.values.map(v => (
+              <button
+                key={v}
+                onClick={() => handle(v)}
+                className={v === value ? 'active' : ''}
+                style={spec.valueStyles ? spec.valueStyles[v] : undefined}
+              >
+                {spec.valueLabels ? spec.valueLabels[v] : v}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  /* Bool setting — On/Off segmented pair, styled the same as
+     EnumSetting so the settings page reads consistently. */
+  const BoolSetting = ({ name, spec }) => {
+    const [value, setValue] = React.useState(() => ScryerSettings.get(name));
+    const handle = (v) => {
+      ScryerSettings.set(name, v);
+      setValue(v);
+    };
+    return (
+      <div className="setting-row">
+        <div className="setting-label-block">
+          <div className="setting-label">{spec.label}</div>
+          <div className="setting-desc">{spec.description}</div>
+        </div>
+        <div className="setting-control">
+          <div className="segmented">
+            <button onClick={() => handle(true)}  className={value === true  ? 'active' : ''}>On</button>
+            <button onClick={() => handle(false)} className={value === false ? 'active' : ''}>Off</button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  /* Route a setting to the right widget based on its `kind`. */
+  const SettingRow = ({ name }) => {
+    const spec = ScryerSettings.registry[name];
+    if (!spec) return null;
+    if (spec.kind === 'bool') return <BoolSetting name={name} spec={spec}/>;
+    return <EnumSetting name={name} spec={spec}/>;
+  };
+
+  /* CherubsPreview — Caliborn + Calliope glyphs rendered with a
+     representative substance load so the user can see substance
+     settings take effect live. Caliborn carries an intentionally
+     dense icon set (Derse crown, chevron, session-center, ∃!) to
+     showcase the bottom-arc packing; Calliope has the counterpart
+     Prospit icons. Data is hardcoded — no session compute needed
+     since this is just a visual preview. */
+  // Stored values are in the site's INTERNAL (Cal) convention:
+  //   Lord = -7, Muse = +7, Time = +1, Space = +6.
+  // The preview formats each number through polarityValueString at
+  // render time so flipping the polarity setting reformats every
+  // stat in place (Caliborn's "Lead +7" becomes "Lead -7" in Cal
+  // mode, "Val +6" becomes "Val -6", etc.).
+  const CHERUB_PREVIEW = [
+    {
+      name: 'Caliborn',
+      className: 'Lord',   aspectName: 'Time',   lunarsway: 'Derse',
+      classpectVal: -6,    rung: 21,
+      leadValue:    -7,    leadRank: '#1',
+      // Explicit Leader + Derse Center + Oddest-One-Out + Closest-Knit
+      bottomIcons: [
+        { kind: 'image', src: './images/playericons-deco/derse-crown.png',   scale: 1.5 },
+        { kind: 'image', src: './images/playericons-deco/derse-chevron.png', scale: 1.6 },
+        { kind: 'text',  char: '∃!', color: '#e0a070' },
+        { kind: 'text',  char: '⋂',  color: '#6dd1f4', scale: 0.85 },
+      ],
+    },
+    {
+      name: 'Calliope',
+      className: 'Muse',   aspectName: 'Space',  lunarsway: 'Prospit',
+      classpectVal: 13,    rung: 26,
+      leadValue:    7,     leadRank: '#2',
+      // Implicit Leader + Prospit Center
+      bottomIcons: [
+        { kind: 'image', src: './images/playericons-deco/prospit-crown.png',   scale: 1.5 },
+        { kind: 'image', src: './images/playericons-deco/prospit-chevron.png', scale: 1.6 },
+      ],
+    },
+  ];
+
+  const CherubsPreview = () => {
+    // Viewport width watcher — the fixed 420px glyphs overflowed
+    // portrait-phone viewports (typical ~400px wide), busting out
+    // of the settings container. On mobile we drop the glyph size
+    // AND the grid's minmax so a single column fits comfortably.
+    const [isMobilePreview, setIsMobilePreview] = React.useState(
+      () => typeof window !== 'undefined' && window.innerWidth < 640
+    );
+    React.useEffect(() => {
+      const onResize = () => setIsMobilePreview(window.innerWidth < 640);
+      window.addEventListener('resize', onResize);
+      return () => window.removeEventListener('resize', onResize);
+    }, []);
+    const previewGlyphPx = isMobilePreview ? 280 : 420;
+    const previewMinPx   = isMobilePreview ? 280 : 420;
+    // Live substance settings so the preview mirrors what the user's
+    // choices will look like on a real Scryer results view.
+    const [subTop,    setSubTop]    = React.useState(() => ScryerSettings.get('substanceTop'));
+    const [subLeft,   setSubLeft]   = React.useState(() => ScryerSettings.get('substanceLeft'));
+    const [subRight,  setSubRight]  = React.useState(() => ScryerSettings.get('substanceRight'));
+    const [subBottom, setSubBottom] = React.useState(() => ScryerSettings.get('substanceBottom'));
+    const [subFont,   setSubFont]   = React.useState(() => ScryerSettings.get('substanceFont'));
+    // Polarity, too — the Lead / Val numbers in the preview flip sign
+    // when the user toggles Huss / Cal, and we want that live rather
+    // than requiring a reload.
+    const [polarity,  setPolarity]  = React.useState(() => ScryerSettings.get('polarityMode'));
+    React.useEffect(() => {
+      const onChange = () => {
+        setSubTop(   ScryerSettings.get('substanceTop'));
+        setSubLeft(  ScryerSettings.get('substanceLeft'));
+        setSubRight( ScryerSettings.get('substanceRight'));
+        setSubBottom(ScryerSettings.get('substanceBottom'));
+        setSubFont(  ScryerSettings.get('substanceFont'));
+        setPolarity( ScryerSettings.get('polarityMode'));
+      };
+      window.addEventListener('scryer-setting-change', onChange);
+      return () => window.removeEventListener('scryer-setting-change', onChange);
+    }, []);
+    const fontStack = {
+      courier:   "'Courier New', 'Courier', monospace",
+      garamond:  "'Garamond', 'EB Garamond', 'Georgia', serif",
+      typostuck: "'Typostuck', 'Courier New', monospace",
+    }[subFont] || "'Courier New', 'Courier', monospace";
+
+    const buildSub = (c) => {
+      let top = null;
+      if (subTop === 'classpect') top = `${c.className.toUpperCase()} OF ${c.aspectName.toUpperCase()}`;
+      else if (subTop === 'name') top = c.name.toUpperCase();
+      // polarityValueString comes from session-constants.js and
+      // returns "+N" or "-N" flipped according to the current mode.
+      const leadStr = polarityValueString(c.leadValue,    polarity);
+      const valStr  = polarityValueString(c.classpectVal, polarity);
+      return {
+        top,
+        left:  subLeft   ? `Lead ${leadStr} • Rank ${c.leadRank}` : null,
+        right: subRight  ? `Val ${valStr} • Rung #${c.rung}`      : null,
+        bottomIcons: subBottom ? c.bottomIcons : [],
+        fontFamily: fontStack,
+      };
+    };
+
+    return (
+      <div style={{
+        display: 'grid',
+        // auto-fit so the two tiles sit side-by-side on wide viewports
+        // and stack to a single column on narrow ones. Both the min
+        // column width AND the glyph size step down together on
+        // mobile so the substance text stays legible without
+        // overflowing the settings container.
+        gridTemplateColumns: `repeat(auto-fit, minmax(${previewMinPx}px, 1fr))`,
+        gap: '20px',
+        justifyItems: 'center',
+        padding: '16px 4px 24px',
+      }}>
+        {CHERUB_PREVIEW.map((c) => (
+          <div key={c.name} style={{display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px'}}>
+            <ClasspectGlyph
+              className={c.className}
+              aspectName={c.aspectName}
+              size={previewGlyphPx}
+              showButtons={false}
+              animate={false}
+              canonCharacters={[{ lunarsway: c.lunarsway }]}
+              substance={buildSub(c)}
+            />
+            <div style={{
+              fontFamily: "'Courier New', monospace",
+              fontSize: '0.95rem',
+              color: '#e6e6e6',
+              letterSpacing: '1.5px',
+            }}>
+              {c.name}
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  const App = () => {
+    const graphSettings     = ['graphXAxisLabels', 'graphYAxisLabels'];
+    // Style = ring color, outline, text font (font moved here from
+    // Substance since it affects visual style, not information content).
+    const styleSettings     = ['glyphRingMode', 'glyphOutlineMode', 'substanceFont'];
+    // Substance = the information-bearing text + icon overlays.
+    const substanceSettings = ['substanceTop', 'substanceLeft', 'substanceRight', 'substanceBottom'];
+
+    return (
+      <>
+        <div className="app-chrome">
+          <ScryerHeader/>
+        </div>
+
+        <main className="settings-container">
+          <h1 className="settings-title">Settings</h1>
+          <p className="settings-subtitle">
+            Saved to this browser. Changes take effect on the next page load.
+          </p>
+
+          <h2 className="section-heading">Polarity</h2>
+          {/* Wrap in a div so the row becomes :last-child of its
+              parent — that suppresses its own bottom border, so the
+              only horizontal rule visible below the section is the
+              actual section divider. Without the wrap, the row's
+              border + the divider stacked as two parallel lines. */}
+          <div>
+            <SettingRow name="polarityMode"/>
+          </div>
+
+          <hr className="divider"/>
+
+          <h2 className="section-heading">Session Grid</h2>
+          <div>
+            {graphSettings.map(name => (
+              <SettingRow key={name} name={name}/>
+            ))}
+          </div>
+
+          <hr className="divider"/>
+
+          <h2 className="section-heading">Glyph Gallery</h2>
+
+          <h3 className="subsection-heading">Style</h3>
+          <div>
+            {styleSettings.map(name => (
+              <SettingRow key={name} name={name}/>
+            ))}
+          </div>
+
+          <h3 className="subsection-heading">Substance</h3>
+          <div>
+            {substanceSettings.map(name => (
+              <SettingRow key={name} name={name}/>
+            ))}
+          </div>
+
+          <CherubsPreview/>
+        </main>
+
+        <div className="app-chrome">
+          <ScryerFooter/>
+        </div>
+      </>
+    );
+  };
+
+  ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>

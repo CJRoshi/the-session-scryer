@@ -113,6 +113,16 @@ const CodeIO = ({ code, onCodePaste, decodeErrors }) => {
    onRemoveMoon isn't wired (older callers), falls back to onRemove,
    which wipes all moons of the classpect. */
 const MemberList = ({ session, onRemove, onRemoveMoon }) => {
+  // Polarity — sitewide sign convention.
+  const [polarity, setPolarity] = React.useState(() => ScryerSettings.get('polarityMode'));
+  React.useEffect(() => {
+    const onChange = (ev) => {
+      if (ev.detail?.name === 'polarityMode') setPolarity(ScryerSettings.get('polarityMode'));
+    };
+    window.addEventListener('scryer-setting-change', onChange);
+    return () => window.removeEventListener('scryer-setting-change', onChange);
+  }, []);
+
   if (session.length === 0) {
     return <div className="text-xs text-gray-500 italic">(no players yet)</div>;
   }
@@ -143,7 +153,7 @@ const MemberList = ({ session, onRemove, onRemoveMoon }) => {
               {g.class} of {g.aspect} <span className="text-gray-500">({g.moon})</span>
               {g.count > 1 && <span className="text-gray-400"> (x{g.count})</span>}
             </span>
-            <span className="text-xs text-gray-400">[{sum >= 0 ? '+' : ''}{sum}]</span>
+            <span className="text-xs text-gray-400">[{polarityValueString(sum, polarity)}]</span>
             <button onClick={handleRemove}
                     title={g.count > 1
                       ? `Remove all ${g.count} ${g.moon} ${g.class}s of ${g.aspect}`

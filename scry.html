@@ -1152,6 +1152,63 @@
       from { opacity: 0; transform: translate(-50%, -50%) scale(0.96); }
       to   { opacity: 1; transform: translate(-50%, -50%) scale(1);    }
     }
+
+    /* ── S+P+I+N discoverability hint (desktop) ─────────
+       Fixed-position dark chip in the lower right, shown while any
+       of S/P/I/N has been held for 1.5s+. Each letter floats gently
+       when unpressed and jitters when pressed, giving a live sense
+       of which keys the user still needs to hold for the trigger.
+       Rendered into document.body via React portal so no transformed
+       ancestor turns `position: fixed` into "positioned relative to
+       that ancestor" (which would strand the chip somewhere off-
+       viewport). Fade in/out driven by a CSS opacity transition
+       on the .is-visible modifier — the DOM node stays mounted so
+       we get symmetric enter/exit tweens. */
+    .spin-hint {
+      position: fixed;
+      right: 20px; bottom: 20px;
+      background: rgba(10, 10, 15, 0.7);
+      color: #f0f0f0;
+      font-family: 'Courier New', monospace;
+      font-weight: bold;
+      font-size: 1.6rem;
+      letter-spacing: 6px;
+      padding: 10px 14px 10px 20px;   /* extra left padding to offset letter-spacing */
+      border-radius: 6px;
+      user-select: none;
+      pointer-events: none;
+      z-index: 10000;
+      backdrop-filter: blur(2px);
+      opacity: 0;
+      transform: translateY(6px);
+      transition: opacity 0.32s ease-out, transform 0.32s ease-out;
+    }
+    .spin-hint.is-visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .spin-hint > span {
+      display: inline-block;
+      /* Per-letter transition — floating baseline; jitter overrides. */
+      animation: spin-hint-float 1.8s ease-in-out infinite;
+    }
+    .spin-hint > span.is-idle    { opacity: 0.55; }
+    .spin-hint > span.is-pressed {
+      opacity: 1;
+      color: #ffdd66;
+      animation: spin-hint-jitter 0.12s steps(1) infinite;
+    }
+    @keyframes spin-hint-float {
+      0%, 100% { transform: translateY(0); }
+      50%      { transform: translateY(-4px); }
+    }
+    @keyframes spin-hint-jitter {
+      0%   { transform: translate( 0px,  0px); }
+      25%  { transform: translate(-1px,  1px); }
+      50%  { transform: translate( 1px, -1px); }
+      75%  { transform: translate(-1px, -1px); }
+      100% { transform: translate( 1px,  1px); }
+    }
     .orb-hover-card .ohc-label {
       font-size: 11px;
       letter-spacing: 2.5px;
@@ -1304,7 +1361,14 @@
       top: 50%;
       transform: translateY(-50%);
       padding: 18px 20px;
-      min-width: 340px;
+      /* Anchor model — INNER-edge pinned, outer edge grows away:
+         .side-left  → RIGHT edge pinned slightly LEFT  of grid center
+         .side-right → LEFT  edge pinned slightly RIGHT of grid center
+         The other side is `auto`, so the card widens outward from the
+         anchor at its content width (min-width 380px) and can even
+         hang a hair past grid-host's outer edge without ever crossing
+         the axis onto its own member. */
+      min-width: 380px;
       background: #f8f8f8;
       border: 1px solid rgba(60, 50, 40, 0.45);
       border-radius: 6px;
@@ -1314,10 +1378,30 @@
       z-index: 6;          /* above orb-hover-card (4) so pin always wins */
       font-family: 'Courier New', monospace;
       color: #1a1a1a;
-      animation: orb-hover-fade 0.18s ease-out;
+      /* Own fade keyframes — the shared `orb-hover-fade` animation is
+         built for the orb card (centered with translate(-50%, -50%))
+         and would clobber our translateY(-50%)-only transform for
+         0.18s, causing the card to visibly jump from a wrong X offset
+         to its final anchor position. During that jump the wrong
+         position frequently overlaps the member itself, which fires
+         the mouseleave that unmounts the card — so the interaction
+         breaks entirely. This variant keeps only the Y translate. */
+      animation: player-hover-fade 0.18s ease-out;
     }
-    .player-hover-card.side-left  { left: 0;   right: 47%; }
-    .player-hover-card.side-right { right: 0;  left: 47%;  }
+    @keyframes player-hover-fade {
+      from { opacity: 0; transform: translateY(-50%) scale(0.96); }
+      to   { opacity: 1; transform: translateY(-50%) scale(1);    }
+    }
+    /* Inner edge pinned ~4% past grid-host center; card grows outward
+       from there at min-width. Values are % of grid-host padding-box
+       (not of the SVG), which is why an earlier symmetric pair using
+       the OUTER edge could drift a column off the axis whenever the
+       SVG rendered off-center inside grid-host. Pinning the INNER
+       edge sidesteps that entirely: the card's near-center boundary
+       is a fixed fraction of the container, so it always lands the
+       same distance from the axis regardless of SVG layout quirks. */
+    .player-hover-card.side-left  { right: 54%; left:  auto; }
+    .player-hover-card.side-right { left:  54%; right: auto; }
     /* Moon-tinted left edge stripe so the card reads as "this player". */
     .player-hover-card.moon-prospit { border-left: 3px solid var(--moon-prospit); }
     .player-hover-card.moon-derse   { border-left: 3px solid var(--moon-derse); }
@@ -1442,7 +1526,7 @@
     }
     .player-hover-card .phc-row { display: flex; gap: 6px; }
     .player-hover-card .phc-row .phc-k {
-      flex: 0 0 120px;
+      flex: 0 0 135px;   /* bumped from 120 so "Dist. to Rep Rung" fits on a single line */
       color: #6a5a48;
     }
     
@@ -1739,12 +1823,14 @@
 <script src="./components/session-stats.js"></script>
 <script src="./components/session-selftest.js"></script>
 <script src="./components/special-sessions.js"></script>
+<script src="./components/settings.js"></script>
 <!-- React/JSX components -->
 <script type="text/babel" src="./components/classpect-link.js"></script>
 <script type="text/babel" src="./components/ui-elements.js"></script>
 <script type="text/babel" src="./components/entry-widgets.js"></script>
 <script type="text/babel" src="./components/session-grid.js"></script>
 <script type="text/babel" src="./components/lunar-components.js"></script>
+<script type="text/babel" src="./components/classpect-glyph.js"></script>
 <!-- Scryer chrome -->
 <script type="text/babel" src="./components/scrying-ball.js"></script>
 <script type="text/babel" src="./components/scrying-interior.js"></script>
@@ -1907,6 +1993,19 @@ const SelfTestPanel = ({ results }) => {
 
 const ResultsView = ({ session, sessionCode = '', gridOverlays, lunarFocus = 'all', onLunarFocus, onLunarHover, focusMoon = null, activeMoon = null, onKnitHover = null, subRep = null, specialContext = null, charLookup = {} }) => {
   const empty = session.length === 0;
+
+  // Polarity mode — sitewide sign convention. Every fmtSigned /
+  // fmtFloat call below routes through polarityValueString /
+  // polaritySign, so the whole ResultsView flips signs together
+  // when the setting toggles.
+  const [polarity, setPolarity] = useState(() => ScryerSettings.get('polarityMode'));
+  useEffect(() => {
+    const onChange = (ev) => {
+      if (ev.detail?.name === 'polarityMode') setPolarity(ScryerSettings.get('polarityMode'));
+    };
+    window.addEventListener('scryer-setting-change', onChange);
+    return () => window.removeEventListener('scryer-setting-change', onChange);
+  }, []);
 
   const [gridTintMode, setGridTintMode] = useState('none');
   const gridTintFn = useMemo(() => {
@@ -2098,6 +2197,134 @@ const ResultsView = ({ session, sessionCode = '', gridOverlays, lunarFocus = 'al
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [pinnedPhantomIdx]);
+
+  // Codename "Nagasaky Kikky Park" (public name: Scryer Skuffle Park)
+  // — hold S+P+I+N simultaneously (any order) while viewing an open
+  // session to jump into the beyblade-glyph physics playground at
+  // spin.html.
+  const [spinHintKeys,    setSpinHintKeys]    = useState(() => new Set());
+  const [spinHintVisible, setSpinHintVisible] = useState(false);
+  const spinHintShowTimer = useRef(null);
+  const spinHintHideTimer = useRef(null);
+  useEffect(() => {
+    if (!sessionCode) return;
+    const spinTarget = 'spin.html#' + encodeURIComponent(sessionCode);
+
+    // ---- Shake-to-spin (mobile) --------------------------------
+    const SHAKE_ACCEL_THRESHOLD = 18;   // m/s² above gravity baseline
+    const SHAKE_MIN_COUNT       = 3;    // jerk samples needed…
+    const SHAKE_WINDOW_MS       = 1000; // …inside this window
+    const shakeTimes = [];
+    const onMotion = (e) => {
+      const a = e.accelerationIncludingGravity;
+      if (!a) return;
+      const mag = Math.hypot(a.x || 0, a.y || 0, a.z || 0);
+      if (Math.abs(mag - 9.8) < SHAKE_ACCEL_THRESHOLD) return;
+      const now = performance.now();
+      while (shakeTimes.length && now - shakeTimes[0] > SHAKE_WINDOW_MS) {
+        shakeTimes.shift();
+      }
+      shakeTimes.push(now);
+      if (shakeTimes.length >= SHAKE_MIN_COUNT) {
+        window.location.href = spinTarget;
+      }
+    };
+    window.addEventListener('devicemotion', onMotion);
+
+    // ---- S+P+I+N (desktop) -------------------------------------
+    const pressed = new Set();
+    const REQUIRED = ['s', 'p', 'i', 'n'];
+    const isTypingContext = () => {
+      const el = document.activeElement;
+      if (!el) return false;
+      const tag = el.tagName;
+      return tag === 'INPUT' || tag === 'TEXTAREA' || el.isContentEditable;
+    };
+    const onDown = (e) => {
+      const k = (e.key || '').toLowerCase();
+      if (k.length !== 1) return;
+      pressed.add(k);
+      // ---- Hint UI ---------------------------------------------
+      // Track the pressed subset of S/P/I/N and manage the show /
+      // hide timers around it. Show fires after 1.5s of ANY
+      // relevant key being held; hide fires 2s after every
+      // relevant key is released.
+      if (REQUIRED.includes(k)) {
+        setSpinHintKeys(prev => {
+          if (prev.has(k)) return prev;
+          return new Set(prev).add(k);
+        });
+        if (spinHintHideTimer.current) {
+          clearTimeout(spinHintHideTimer.current);
+          spinHintHideTimer.current = null;
+        }
+        if (!spinHintShowTimer.current) {
+          spinHintShowTimer.current = setTimeout(() => {
+            setSpinHintVisible(true);
+            spinHintShowTimer.current = null;
+          }, 1500);
+        }
+      }
+      if (isTypingContext()) return;
+      if (REQUIRED.every(r => pressed.has(r))) {
+        window.location.href = spinTarget;
+      }
+    };
+    const onUp = (e) => {
+      const k = (e.key || '').toLowerCase();
+      if (k.length === 1) pressed.delete(k);
+      if (REQUIRED.includes(k)) {
+        setSpinHintKeys(prev => {
+          if (!prev.has(k)) return prev;
+          const next = new Set(prev);
+          next.delete(k);
+          return next;
+        });
+        // If no relevant keys are still down, start the hide
+        // timer (and cancel any pending show timer that never
+        // got to fire).
+        const anyStill = REQUIRED.some(r => pressed.has(r));
+        if (!anyStill) {
+          if (spinHintShowTimer.current) {
+            clearTimeout(spinHintShowTimer.current);
+            spinHintShowTimer.current = null;
+          }
+          if (spinHintHideTimer.current) clearTimeout(spinHintHideTimer.current);
+          spinHintHideTimer.current = setTimeout(() => {
+            setSpinHintVisible(false);
+            spinHintHideTimer.current = null;
+          }, 2000);
+        }
+      }
+    };
+    // Blur clears the whole set — otherwise Alt-Tabbing mid-hold can
+    // leave phantom keys stuck in `pressed` forever. Same reset for
+    // the hint UI (no keys pressed → start the hide timer).
+    const onBlur = () => {
+      pressed.clear();
+      setSpinHintKeys(new Set());
+      if (spinHintShowTimer.current) {
+        clearTimeout(spinHintShowTimer.current);
+        spinHintShowTimer.current = null;
+      }
+      if (spinHintHideTimer.current) clearTimeout(spinHintHideTimer.current);
+      spinHintHideTimer.current = setTimeout(() => {
+        setSpinHintVisible(false);
+        spinHintHideTimer.current = null;
+      }, 2000);
+    };
+    window.addEventListener('keydown', onDown);
+    window.addEventListener('keyup',   onUp);
+    window.addEventListener('blur',    onBlur);
+    return () => {
+      window.removeEventListener('keydown',    onDown);
+      window.removeEventListener('keyup',      onUp);
+      window.removeEventListener('blur',       onBlur);
+      window.removeEventListener('devicemotion', onMotion);
+      if (spinHintShowTimer.current) clearTimeout(spinHintShowTimer.current);
+      if (spinHintHideTimer.current) clearTimeout(spinHintHideTimer.current);
+    };
+  }, [sessionCode]);
 
   useEffect(() => {
     window.__cp_focusPlayer = (cls, asp) => {
@@ -2383,6 +2610,14 @@ const ResultsView = ({ session, sessionCode = '', gridOverlays, lunarFocus = 'al
     }
   }
 
+  // Polarity-aware signed formatters.
+  const fmtSigned = v => polarityValueString(v, polarity);
+  const fmtFloat  = v => {
+    if (v === null || v === undefined) return '';
+    const f = polaritySign(v, polarity);
+    return (f >= 0 ? '+' : '') + f.toFixed(2);
+  };
+
   // ---- G.3 Likeliest Leader (card). ----
   let leaderValue = null;
   let leaderNote  = 'implicit / explicit score';
@@ -2407,7 +2642,7 @@ const ResultsView = ({ session, sessionCode = '', gridOverlays, lunarFocus = 'al
           <span className="quip-lead">leads by default.</span>
         </>
       );
-      leaderNote = `score ${sole.score >= 0 ? '+' : ''}${sole.score} · ${sole.side}`;
+      leaderNote = `score ${fmtSigned(sole.score)} · ${sole.side}`;
     } else if (!topImplicit && !topExplicit) {
       // 2. All Balanced — no Implicit, no Explicit. Tie-broken pick
       //    still surfaces as "best we can offer" but framed as such.
@@ -2432,7 +2667,7 @@ const ResultsView = ({ session, sessionCode = '', gridOverlays, lunarFocus = 'al
           <span className="quip-lead">leading from behind the scenes.</span>
         </>
       );
-      leaderNote = `Implicit · score +${topImplicit.score}`;
+      leaderNote = `Implicit · score ${fmtSigned(topImplicit.score)}`;
     } else if (!topImplicit && topExplicit) {
       // 4. Explicit-only session.
       quip = (
@@ -2442,7 +2677,7 @@ const ResultsView = ({ session, sessionCode = '', gridOverlays, lunarFocus = 'al
           <span className="quip-lead">leading from the front.</span>
         </>
       );
-      leaderNote = `Explicit · score ${topExplicit.score}`;
+      leaderNote = `Explicit · score ${fmtSigned(topExplicit.score)}`;
     } else {
       // 5. Both sides present. Explicit is named as the front-of-house
       //    leader; the second clause depends on whose absScore tops the
@@ -2461,7 +2696,7 @@ const ResultsView = ({ session, sessionCode = '', gridOverlays, lunarFocus = 'al
           )}
         </>
       );
-      leaderNote = `Explicit ${topExplicit.score} · Implicit +${topImplicit.score}`;
+      leaderNote = `Explicit ${fmtSigned(topExplicit.score)} · Implicit ${fmtSigned(topImplicit.score)}`;
     }
 
     const rankedUnique = dedupeRanked(lead.ranked);
@@ -2472,9 +2707,7 @@ const ResultsView = ({ session, sessionCode = '', gridOverlays, lunarFocus = 'al
           <div className="card-ranking">
             {rankedUnique.map((r, i) => {
               const sideClass = r.side.toLowerCase();
-              const scoreText = r.side === 'Balanced'
-                ? '0'
-                : (r.side === 'Implicit' ? `+${r.score}` : `${r.score}`);
+              const scoreText = r.side === 'Balanced' ? '0' : fmtSigned(r.score);
               const dupeSuffix = r.dupeCount > 1 ? ` (x${r.dupeCount})` : '';
               // Find this player's special-session member entry (if any)
               // to surface their name + text color in the ranking row.
@@ -2525,8 +2758,6 @@ const ResultsView = ({ session, sessionCode = '', gridOverlays, lunarFocus = 'al
 
   // ---- Orb hover-cards.
   // Empty session → a short italic placeholder line per orb.
-  const fmtSigned = v => (v >= 0 ? '+' : '') + v;
-  const fmtFloat  = v => (v >= 0 ? '+' : '') + v.toFixed(2);
   const ruleDisplay = code =>
     ({ A: 'Duplicated classes and aspects',
        B: 'No duplicate Aspects',
@@ -2865,9 +3096,13 @@ const ResultsView = ({ session, sessionCode = '', gridOverlays, lunarFocus = 'al
     const hasDupes = dupeCounts && dupeCounts.total > 1;
     const isPinned = pinnedPlayerIdx !== null;
 
-    // Place the card on the OPPOSITE half of the grid from the player so
-    // it never covers them. 
-    const cardSideClass = cv > 0 ? 'side-left' : 'side-right';
+    // Place the card on the OPPOSITE VISUAL half of the grid from the
+    // player so it never covers them. Which half is "visual right"
+    // depends on polarity: in Cal, cv > 0 is on the right; in Huss the
+    // axis is flipped, so cv < 0 is on the right. Without this branch,
+    // Huss-mode cards land on the same side as the member and cover it.
+    const memberOnVisualRight = polarity === 'cal' ? cv > 0 : cv < 0;
+    const cardSideClass = memberOnVisualRight ? 'side-left' : 'side-right';
 
     const aspectNeedsOutline = (p.aspect === 'Space' || p.aspect === 'Hope' || p.aspect === 'Light');
 
@@ -2919,10 +3154,16 @@ const ResultsView = ({ session, sessionCode = '', gridOverlays, lunarFocus = 'al
               <div className="phc-title-line">
                 <ClasspectLink className={p.class} aspectName={p.aspect}
                                target="cc" size="large"/>
+                {/* Discord-preferred layout: [Class] of [Aspect] [class icon]
+                    [aspect icon] [moon]. Class icon uses the outline variant
+                    so it reads clearly against the card's varying backgrounds. */}
+                <img className="phc-inline-icon phc-class-icon"
+                     src={`./images/classes/outline/${p.class.toLowerCase()}.svg`}
+                     alt={p.class}/>
                 <img className={`phc-inline-icon phc-aspect-icon${aspectNeedsOutline ? ' needs-outline' : ''}`}
-                     src={`./images/aspects/no-bg/${p.aspect.toLowerCase()}.webp`}
+                     src={`./images/aspects/no-bg/${p.aspect.toLowerCase()}.svg`}
                      alt={p.aspect}/>
-                
+
                 {!hasDupes && (
                   <img className="phc-inline-icon phc-moon-icon"
                        src={`./images/moons/no_bg/${p.moon.toLowerCase()}_no-bg.png`}
@@ -3026,23 +3267,42 @@ const ResultsView = ({ session, sessionCode = '', gridOverlays, lunarFocus = 'al
           </div>
         )}
 
-        {farPartners.length > 0 && con && (
-          <div className="phc-far">
-            <span className="phc-far-k">
-              Furthest from{farPartners.length > 1 ? ' (ties)' : ''}:
-            </span>
-            {farPartners.map((q, idx) => (
-              <span key={idx}>
-                {idx > 0 && <span style={{ color: 'var(--text-faint)' }}>, </span>}
-                <ClasspectLink className={q.class} aspectName={q.aspect}
-                               target="grid" size="small"/>
+        {farPartners.length > 0 && con && (() => {
+          // Dedupe by classpect.
+          const grouped = [];
+          const idxByKey = new Map();
+          for (const q of farPartners) {
+            const key = `${q.class}|${q.aspect}`;
+            if (idxByKey.has(key)) {
+              grouped[idxByKey.get(key)].count += 1;
+            } else {
+              idxByKey.set(key, grouped.length);
+              grouped.push({ q, count: 1 });
+            }
+          }
+          return (
+            <div className="phc-far">
+              <span className="phc-far-k">
+                Furthest from{grouped.length > 1 ? ' (ties)' : ''}:
               </span>
-            ))}
-            <span style={{ color: 'var(--text-faint)', marginLeft: '0.5em' }}>
-              ({con.maxDist.toFixed(3)})
-            </span>
-          </div>
-        )}
+              {grouped.map((g, idx) => (
+                <span key={idx}>
+                  {idx > 0 && <span style={{ color: 'var(--text-faint)' }}>, </span>}
+                  <ClasspectLink className={g.q.class} aspectName={g.q.aspect}
+                                 target="grid" size="small"/>
+                  {g.count > 1 && (
+                    <span style={{ color: 'var(--text-faint)', marginLeft: '0.25em' }}>
+                      ×{g.count}
+                    </span>
+                  )}
+                </span>
+              ))}
+              <span style={{ color: 'var(--text-faint)', marginLeft: '0.5em' }}>
+                ({con.maxDist.toFixed(3)})
+              </span>
+            </div>
+          );
+        })()}
 
         {isPinned && (
           <div className="phc-pin-hint">click member again or × to dismiss</div>
@@ -3073,9 +3333,11 @@ const ResultsView = ({ session, sessionCode = '', gridOverlays, lunarFocus = 'al
                         : ph.moon === 'Derse'   ? 'derse'
                         : 'dual';
     const cardMoonClass = `moon-${moonChipClass}`;
-    // Same side-pin rule as the player card: phantom on the right of the
-    // grid → card flush-left, phantom on the left → flush-right.
-    const cardSideClass = cv > 0 ? 'side-left' : 'side-right';
+    // Same side-pin rule as the player card, and same polarity fix:
+    // "visual right" is cv > 0 in Cal but cv < 0 in Huss, so the card
+    // has to consult the polarity setting rather than the raw sign.
+    const phMemberOnVisualRight = polarity === 'cal' ? cv > 0 : cv < 0;
+    const cardSideClass = phMemberOnVisualRight ? 'side-left' : 'side-right';
 
     const lead = ph.card && ph.card.leadership;
 
@@ -3290,9 +3552,18 @@ const ResultsView = ({ session, sessionCode = '', gridOverlays, lunarFocus = 'al
                    onChange={() => setGridTintMode(gridTintMode === 'leadership' ? 'none' : 'leadership')}/>
             <span>Leadership</span>
           </label>
+          {/* Signs stay pinned (− left, + right); the gradient itself
+              flips with polarity so the amber end always sits under
+              the sign that maps to Implicit / Passive in the current
+              convention. Inline gradient overrides the static one
+              defined for .legend-gradient in the stylesheet. */}
           <span className="grid-toggle-legend" aria-hidden>
             <span className="legend-stop legend-neg">−</span>
-            <span className="legend-gradient"/>
+            <span className="legend-gradient" style={{
+              background: polarity === 'cal'
+                ? 'linear-gradient(to right, #14025a 0%, #782c92 25%, #160a1e 50%, #dcb464 75%, #faf06e 100%)'
+                : 'linear-gradient(to right, #faf06e 0%, #dcb464 25%, #160a1e 50%, #782c92 75%, #14025a 100%)'
+            }}/>
             <span className="legend-stop legend-pos">+</span>
           </span>
         </div>
@@ -3379,7 +3650,573 @@ const ResultsView = ({ session, sessionCode = '', gridOverlays, lunarFocus = 'al
                   valueColor="#a0e07a"
                   note={leaderNote}/>
       </div>
+
+      {/* ========================================================
+          GLYPH GALLERY — one plain classpect glyph per session
+          member, in a 4-up grid (wrapping to fewer columns at
+          narrow viewports). Substance/animation are hidden by
+          default; clicking a glyph opens a modal with the
+          annotated + animated version. Download-session button
+          below the grid opens a preview + confirm dialog before
+          producing the ZIP.
+          ======================================================== */}
+      {!empty && (
+        <GlyphGallery
+          session={session}
+          lead={lead}
+          odd={odd}
+          knit={knit}
+          cen={cen}
+          luna={luna}
+          specialContext={specialContext}
+          charLookup={charLookup}
+        />
+      )}
+      {/* S+P+I+N discoverability hint — appears after 1.5s of holding
+          any trigger key and lingers until 2s after release. Portalled
+          to <body> so the position:fixed anchor references the actual
+          viewport rather than any transformed ancestor. The DOM node
+          stays mounted; the .is-visible modifier drives a symmetric
+          opacity+translate transition so both fade-in and fade-out
+          run smoothly. */}
+      {sessionCode && ReactDOM.createPortal(
+        <div className={`spin-hint${spinHintVisible ? ' is-visible' : ''}`}
+             aria-hidden={!spinHintVisible}>
+          {['s', 'p', 'i', 'n'].map((k, idx) => (
+            <span key={k}
+                  className={spinHintKeys.has(k) ? 'is-pressed' : 'is-idle'}
+                  style={{ animationDelay: `${idx * 0.18}s` }}>
+              {k.toUpperCase()}
+            </span>
+          ))}
+        </div>,
+        document.body
+      )}
     </div>
+  );
+};
+
+/* -----------------------------------------------------------------
+   GlyphGallery — grid of plain glyphs + click-to-annotated popup
+                  + download-session button.
+   ----------------------------------------------------------------- */
+const GlyphGallery = ({ session, lead, odd, knit, cen, luna, specialContext, charLookup }) => {
+  // Viewport-width watcher — used to switch the gallery to a
+  // 2-column layout with smaller glyphs on mobile. Without this the
+  // fixed 4×240px grid overflowed 400px-wide phones, with tiles
+  // clipping into each other and labels overlapping their neighbors.
+  const [isMobileGallery, setIsMobileGallery] = React.useState(
+    () => typeof window !== 'undefined' && window.innerWidth < 640
+  );
+  React.useEffect(() => {
+    const onResize = () => setIsMobileGallery(window.innerWidth < 640);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+  const galleryCols     = isMobileGallery ? 2   : 4;
+  const galleryGlyphPx  = isMobileGallery ? 140 : 240;
+  const galleryGapPx    = isMobileGallery ? 10  : 18;
+  const galleryLabelPx  = isMobileGallery ? '0.72rem' : '0.82rem';
+  // Live Substance settings + outline mode. Subscribe to
+  // scryer-setting-change so the gallery re-renders when the user
+  // tweaks the settings page in another tab. Outline mode drives
+  // the dedupe key — if outlines are on, members with the same
+  // classpect but different lunar sways render as visually distinct
+  // glyphs and shouldn't be merged.
+  const [subTop,    setSubTop]    = useState(() => ScryerSettings.get('substanceTop'));
+  const [subLeft,   setSubLeft]   = useState(() => ScryerSettings.get('substanceLeft'));
+  const [subRight,  setSubRight]  = useState(() => ScryerSettings.get('substanceRight'));
+  const [subBottom, setSubBottom] = useState(() => ScryerSettings.get('substanceBottom'));
+  const [subFont,   setSubFont]   = useState(() => ScryerSettings.get('substanceFont'));
+  const [outlineOn, setOutlineOn] = useState(() => ScryerSettings.get('glyphOutlineMode') !== 'none');
+  const [polarity,  setPolarity]  = useState(() => ScryerSettings.get('polarityMode'));
+  useEffect(() => {
+    const onChange = () => {
+      setSubTop(   ScryerSettings.get('substanceTop'));
+      setSubLeft(  ScryerSettings.get('substanceLeft'));
+      setSubRight( ScryerSettings.get('substanceRight'));
+      setSubBottom(ScryerSettings.get('substanceBottom'));
+      setSubFont(  ScryerSettings.get('substanceFont'));
+      setOutlineOn(ScryerSettings.get('glyphOutlineMode') !== 'none');
+      setPolarity( ScryerSettings.get('polarityMode'));
+    };
+    window.addEventListener('scryer-setting-change', onChange);
+    return () => window.removeEventListener('scryer-setting-change', onChange);
+  }, []);
+
+  // Resolve a session member's display name. Special sessions supply
+  // a `members` roster mapping (class, aspect) → known character; if
+  // this classpect matches one, we use their name (or the raw
+  // character key as fallback). Returns null for anonymous members so
+  // callers can fall back to the classpect string.
+  const memberName = (p) => {
+    if (specialContext && Array.isArray(specialContext.members)) {
+      const entry = specialContext.members.find((m) => {
+        const cd = charLookup?.[m.characterKey];
+        return cd && Array.isArray(cd.classpect)
+            && cd.classpect[0] === p.class && cd.classpect[1] === p.aspect;
+      });
+      if (entry) return entry.name || entry.characterKey;
+    }
+    return null;
+  };
+
+  // Font-family CSS string per substanceFont setting.
+  const fontStack = {
+    courier:   "'Courier New', 'Courier', monospace",
+    garamond:  "'Garamond', 'EB Garamond', 'Georgia', serif",
+    typostuck: "'Typostuck', 'Courier New', monospace",
+  }[subFont] || "'Courier New', 'Courier', monospace";
+  const [popupIdx,       setPopupIdx]       = useState(null);
+  const [downloadPickIdx,setDownloadPickIdx]= useState(null);
+  // ZIP flow state: `preparing` mounts a hidden batch of substance-
+  // carrying glyphs off-screen so we can capture PNGs from them;
+  // `downloading` shows the "Working…" state on the Yes button
+  // while composeStaticPng + JSZip do their thing.
+  const [preparingZip,   setPreparingZip]   = useState(false);
+  const [downloadingZip, setDownloadingZip] = useState(false);
+  // Ref map keyed by member index → ClasspectGlyph imperative handle.
+  const hiddenGlyphRefs = React.useRef({});
+
+  // Build the substance object for a given member index. Same data
+  // sources as the ScryCards above (leadership rank, Oddest / Closest-
+  // Knit, classpect value). Rendered only in the popup + download-
+  // preview + eventual ZIP output — never on the gallery tile itself.
+  const buildSubstance = (i) => {
+    const p = session[i];
+    const topImplicitIdx = lead ? lead.ranked.find(r => r.side === 'Implicit')?.playerIdx : null;
+    const topExplicitIdx = lead ? lead.ranked.find(r => r.side === 'Explicit')?.playerIdx : null;
+    const isTopImplicit  = topImplicitIdx === i;
+    const isTopExplicit  = topExplicitIdx === i;
+    const isOddest       = odd && odd.playerIdx === i;
+    const isKnit         = (knit && knit.kind === 'clique' && knit.playerIdxs?.includes(i))
+                        || (knit && knit.kind === 'fallback' && knit.playerIdx === i);
+    const leaderRow  = lead && lead.ranked.find(r => r.playerIdx === i);
+    const leaderRank = lead ? lead.ranked.findIndex(r => r.playerIdx === i) + 1 : null;
+    const classpectValue = (classesNumeric[p.class] || 0) + (aspectsNumeric[p.aspect] || 0);
+
+    // Session-center and lunar-center flags — member sits at the
+    // computed centroids. Same predicates the grid overlays use.
+    const isSessionCenter = cen && !cen.isNexus
+                          && cen.repClass === p.class && cen.repAspect === p.aspect;
+    const pCen = luna?.prospit?.centroid;
+    const dCen = luna?.derse?.centroid;
+    const isProspitCenter = pCen && !pCen.isNexus
+                          && pCen.repClass === p.class && pCen.repAspect === p.aspect;
+    const isDerseCenter   = dCen && !dCen.isNexus
+                          && dCen.repClass === p.class && dCen.repAspect === p.aspect;
+
+    const bottomIcons = [];
+    // Crown PNGs get a scale bump so their detail reads at this
+    // rendered size; ∃! and ⋂ are unicode chars sized via the
+    // component's fontPx. Chevrons and session-center icon are wider-
+    // than-tall so they get their own scale tune.
+    if (isTopImplicit)   bottomIcons.push({ kind: 'image', src: './images/playericons-deco/prospit-crown.png', scale: 1.5 });
+    if (isTopExplicit)   bottomIcons.push({ kind: 'image', src: './images/playericons-deco/derse-crown.png',   scale: 1.5 });
+    if (isProspitCenter) bottomIcons.push({ kind: 'image', src: './images/playericons-deco/prospit-chevron.png', scale: 1.6 });
+    if (isDerseCenter)   bottomIcons.push({ kind: 'image', src: './images/playericons-deco/derse-chevron.png',   scale: 1.6 });
+    if (isSessionCenter) bottomIcons.push({ kind: 'image', src: './images/griddecorators/sessioncenter-icon.png', scale: 1.5 });
+    if (isOddest)        bottomIcons.push({ kind: 'text',  char: '∃!', color: '#e0a070' });
+    if (isKnit)          bottomIcons.push({ kind: 'text',  char: '⋂',  color: '#6dd1f4', scale: 0.85 });
+
+    // Rung number — same lattice math the Connector's constants.js
+    // uses (r² = c² + a²). RUNG_BY_R2 is already in scope from
+    // session-constants.js.
+    const rung = RUNG_BY_R2[
+      (classesNumeric[p.class]  || 0) ** 2 +
+      (aspectsNumeric[p.aspect] || 0) ** 2
+    ];
+
+    // Leadership + classpect values are display-flipped per the
+    // polarity setting. Rank and rung are integers with no directional
+    // meaning so they display unchanged.
+    const leftParts = [];
+    if (leaderRow)  leftParts.push(`Lead ${polarityValueString(leaderRow.score, polarity)}`);
+    if (leaderRank) leftParts.push(`Rank #${leaderRank}`);
+    const rightParts = [];
+    rightParts.push(`Val ${polarityValueString(classpectValue, polarity)}`);
+    if (rung) rightParts.push(`Rung #${rung}`);
+
+    // Top-arc label — driven by the substanceTop enum setting.
+    //   'none'      → no top text
+    //   'classpect' → "HEIR OF BREATH" style
+    //   'name'      → member's known name, falls back to classpect
+    //                 for anonymous members so the arc doesn't stay
+    //                 blank on sessions without named characters.
+    const name = memberName(p);
+    let topLabel = null;
+    if (subTop === 'classpect') {
+      topLabel = `${p.class.toUpperCase()} OF ${p.aspect.toUpperCase()}`;
+    } else if (subTop === 'name') {
+      topLabel = name
+        ? name.toUpperCase()
+        : `${p.class.toUpperCase()} OF ${p.aspect.toUpperCase()}`;
+    }
+
+    return {
+      top:        topLabel,
+      // Gate each zone on its own bool setting.
+      left:        subLeft   ? (leftParts.join(' • ')  || null) : null,
+      right:       subRight  ? (rightParts.join(' • ') || null) : null,
+      bottomIcons: subBottom ? bottomIcons                       : [],
+      fontFamily:  fontStack,
+    };
+  };
+
+  // Tile label under each gallery glyph: known name if available,
+  // else the "Class of Aspect" string. Same fallback logic as the
+  // top-arc substance, keeping the two consistent.
+  const memberLabel = (p) => memberName(p) || `${p.class} of ${p.aspect}`;
+
+  // Deduplicated view of the roster for the gallery + ZIP export.
+  // Rules:
+  //   - Named members always get their own entry.
+  //   - Anonymous members merge on classpect PLUS (when outlines are
+  //     on) lunar sway — since Prospit/Derse/Dual outlines make
+  //     otherwise-identical glyphs visually distinct, they shouldn't
+  //     be collapsed. When outlines are off the sway is invisible,
+  //     so classpect alone drives the merge.
+  //   - Each entry keeps `idx` (first-occurrence session index) so
+  //     click-to-popup and substance building still route to a
+  //     real session member.
+  const galleryEntries = React.useMemo(() => {
+    const result = [];
+    const anonKeyToIdx = new Map();
+    for (let i = 0; i < session.length; i++) {
+      const p = session[i];
+      const nm = memberName(p);
+      if (nm) {
+        result.push({ p, idx: i, name: nm, count: 1 });
+      } else {
+        const swayKey = outlineOn ? `|${(p.moon || '').toLowerCase()}` : '';
+        const key = `${p.class}|${p.aspect}${swayKey}`;
+        if (anonKeyToIdx.has(key)) {
+          result[anonKeyToIdx.get(key)].count += 1;
+        } else {
+          anonKeyToIdx.set(key, result.length);
+          result.push({ p, idx: i, name: null, count: 1 });
+        }
+      }
+    }
+    return result;
+  }, [session, specialContext, charLookup, outlineOn]);
+
+  const startDownload = () => {
+    // Pick a random member for the preview shown in the confirm dialog.
+    const rand = Math.floor(Math.random() * session.length);
+    setDownloadPickIdx(rand);
+  };
+  const cancelDownload  = () => setDownloadPickIdx(null);
+
+  // JSZip loader — dynamic script tag so we don't ship the JSZip
+  // bundle bytes until the user asks for a ZIP.
+  const loadJSZip = () => {
+    if (window.JSZip) return Promise.resolve(window.JSZip);
+    return new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+      s.onload  = () => resolve(window.JSZip);
+      s.onerror = () => reject(new Error('JSZip failed to load'));
+      document.head.appendChild(s);
+    });
+  };
+
+  // Poll a hidden glyph until its async assets (ring geometry + aspect
+  // bbox) are loaded, then it's safe to call composeStaticPng on it.
+  // Gives up after ~10 s so a bad asset doesn't hang the whole flow.
+  const waitForGlyphReady = (getRef) =>
+    new Promise((resolve) => {
+      const start = Date.now();
+      const tick = () => {
+        const r = getRef();
+        if (r && r.isReady && r.isReady()) return resolve(true);
+        if (Date.now() - start > 10000)    return resolve(false);
+        setTimeout(tick, 100);
+      };
+      tick();
+    });
+
+  const confirmDownload = async () => {
+    setDownloadingZip(true);
+    setPreparingZip(true);     // mounts the off-screen batch of glyphs
+
+    let JSZip;
+    try {
+      JSZip = await loadJSZip();
+    } catch (err) {
+      alert('Couldn\'t load the ZIP library. Check your network and try again.');
+      setDownloadingZip(false);
+      setPreparingZip(false);
+      setDownloadPickIdx(null);
+      return;
+    }
+
+    const zip = new JSZip();
+    const usedNames = new Set();
+
+    // Iterate the deduped roster: one PNG per unique member (named
+    // characters + one entry per anonymous classpect). Skips the
+    // "download 3 identical PNGs" scenario when a session has
+    // multiple unnamed members with the same classpect.
+    for (const entry of galleryEntries) {
+      const p     = entry.p;
+      const ready = await waitForGlyphReady(() => hiddenGlyphRefs.current[entry.idx]);
+      if (!ready) continue;
+      const blob = await hiddenGlyphRefs.current[entry.idx].composeStaticPng(1024);
+      if (!blob) continue;
+
+      // Filename — prefer member name; otherwise "class-of-aspect".
+      // When outlines are on AND this is an anonymous entry, append
+      // the sway so a Prospit / Derse / Dual Prince of Void each
+      // land as separate distinguishable files rather than needing
+      // the "-2" collision suffix.
+      let raw;
+      if (memberName(p)) {
+        raw = memberName(p);
+      } else if (outlineOn && p.moon) {
+        raw = `${p.class}-of-${p.aspect}-${p.moon}`;
+      } else {
+        raw = `${p.class}-of-${p.aspect}`;
+      }
+      const base = raw.replace(/[^\w\s-]/g, '').replace(/\s+/g, '-').toLowerCase();
+      let fname = `${base}.png`;
+      let n = 2;
+      while (usedNames.has(fname)) fname = `${base}-${n++}.png`;
+      usedNames.add(fname);
+      zip.file(fname, blob);
+    }
+
+    const zipBlob = await zip.generateAsync({ type: 'blob' });
+    const url = URL.createObjectURL(zipBlob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'classpect-glyphs.zip';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    setDownloadingZip(false);
+    setPreparingZip(false);
+    setDownloadPickIdx(null);
+    hiddenGlyphRefs.current = {};
+  };
+
+  return (
+    <>
+      <div className="section-divider">Glyph Gallery</div>
+
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: `repeat(${galleryCols}, minmax(0, 1fr))`,
+        gap: galleryGapPx + 'px',
+        justifyItems: 'center',
+        padding: '10px 0 20px',
+      }}>
+        {galleryEntries.map((entry) => (
+          <div key={entry.idx}
+               onClick={() => setPopupIdx(entry.idx)}
+               style={{
+                 display: 'flex', flexDirection: 'column',
+                 alignItems: 'center', gap: '6px',
+                 cursor: 'pointer',
+                 // Keep the tile from exceeding its column, and keep
+                 // long labels from pushing sibling tiles around.
+                 maxWidth: '100%',
+                 minWidth: 0,
+                 overflow: 'hidden',
+               }}
+               title="Click to see the animated + annotated version">
+            <ClasspectGlyph
+              className={entry.p.class}
+              aspectName={entry.p.aspect}
+              size={galleryGlyphPx}
+              showButtons={false}
+              animate={false}
+              canonCharacters={[{ lunarsway: entry.p.moon }]}
+            />
+            <div className="font-courier" style={{
+              fontSize: galleryLabelPx, color: '#e6e6e6',
+              letterSpacing: '1px',
+              maxWidth: '100%',
+              // Center + truncate long names on mobile so the tile
+              // width isn't dictated by the label.
+              textAlign: 'center',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}>
+              {memberLabel(entry.p)}
+              {entry.count > 1 && (
+                <span style={{marginLeft: '0.35em', color: '#a0a0a0'}}>×{entry.count}</span>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div style={{display: 'flex', justifyContent: 'center', padding: '4px 0 20px'}}>
+        <button className="grid-save-btn" onClick={startDownload} title="Download every glyph in this session as a ZIP of 1024×1024 PNGs">
+          <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+            <path d="M12 5v10m0 0l-4-4m4 4l4-4" strokeLinecap="round"/>
+            <path d="M4 17v2a1 1 0 001 1h14a1 1 0 001-1v-2" strokeLinecap="round"/>
+          </svg>
+          Download session
+        </button>
+      </div>
+
+      {/* Click-a-glyph popup + download-preview dialog. */}
+      {popupIdx !== null && ReactDOM.createPortal(
+        <div
+          onClick={() => setPopupIdx(null)}
+          style={{
+            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+            background: 'rgba(0,0,0,0.85)', zIndex: 9999,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px',
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              position: 'relative', padding: '24px 24px 18px',
+              background: '#0a0a0a', borderRadius: '12px',
+              border: '2px solid #333', maxWidth: '92vw', maxHeight: '92vh',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px',
+            }}
+          >
+            <button
+              onClick={() => setPopupIdx(null)}
+              aria-label="Close"
+              style={{
+                // Floated outside the popup's top-right corner so it
+                // doesn't overlap the modal border or crowd the glyph.
+                position: 'absolute', top: '-14px', right: '-14px',
+                width: '36px', height: '36px',
+                background: '#0a0a0a',
+                border: '2px solid #555',
+                borderRadius: '50%',
+                color: '#e6e6e6', fontSize: '20px', fontWeight: 'bold',
+                cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                padding: 0, lineHeight: 1,
+                boxShadow: '0 2px 8px rgba(0,0,0,0.6)',
+                transition: 'background 0.15s, border-color 0.15s, transform 0.1s',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = '#1a1a1a';
+                e.currentTarget.style.borderColor = '#888';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = '#0a0a0a';
+                e.currentTarget.style.borderColor = '#555';
+              }}
+            >×</button>
+            <ClasspectGlyph
+              className={session[popupIdx].class}
+              aspectName={session[popupIdx].aspect}
+              /* Down-scaled on mobile — 480 blew past the modal's
+                 92vw ceiling on ~400px viewports, clipping the glyph
+                 and pushing the label off-canvas. */
+              size={isMobileGallery ? 300 : 480}
+              showButtons={true}
+              animate={true}
+              canonCharacters={[{ lunarsway: session[popupIdx].moon }]}
+              substance={buildSubstance(popupIdx)}
+            />
+            <div className="font-courier" style={{fontSize: '0.9rem', color: '#e6e6e6', letterSpacing: '1px'}}>
+              {memberLabel(session[popupIdx])}
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {downloadPickIdx !== null && ReactDOM.createPortal(
+        <div
+          onClick={cancelDownload}
+          style={{
+            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+            background: 'rgba(0,0,0,0.85)', zIndex: 9999,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px',
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              padding: '20px 24px', background: '#0a0a0a',
+              borderRadius: '12px', border: '2px solid #333',
+              maxWidth: '92vw', maxHeight: '92vh',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '14px',
+            }}
+          >
+            <div className="font-courier" style={{fontSize: '0.95rem', color: '#e6e6e6', letterSpacing: '1px'}}>
+              Download session with this style?
+            </div>
+            <ClasspectGlyph
+              className={session[downloadPickIdx].class}
+              aspectName={session[downloadPickIdx].aspect}
+              /* Same mobile down-scale as the view popup above —
+                 the 360px preview also overflowed narrow viewports. */
+              size={isMobileGallery ? 260 : 360}
+              showButtons={false}
+              animate={false}
+              canonCharacters={[{ lunarsway: session[downloadPickIdx].moon }]}
+              substance={buildSubstance(downloadPickIdx)}
+            />
+            <div className="font-courier" style={{fontSize: '0.75rem', color: '#888', letterSpacing: '1px'}}>
+              Preview: {memberLabel(session[downloadPickIdx])}
+            </div>
+            <div style={{display: 'flex', gap: '12px'}}>
+              <button
+                className="grid-save-btn"
+                onClick={confirmDownload}
+                disabled={downloadingZip}
+              >
+                {downloadingZip ? 'Working…' : 'Yes'}
+              </button>
+              <button
+                className="grid-save-btn"
+                onClick={cancelDownload}
+                disabled={downloadingZip}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Off-screen batch of substance-carrying glyphs mounted only
+          during the ZIP flow. Positioned way off the viewport so
+          they render (needed for ringGeom/aspectAsset to load and
+          the substance <svg> to appear in the DOM) without touching
+          the visible layout. Each glyph exposes composeStaticPng via
+          imperative ref, keyed by member index. */}
+      {preparingZip && ReactDOM.createPortal(
+        <div style={{
+          position: 'absolute',
+          left:     '-99999px',
+          top:      0,
+          pointerEvents: 'none',
+        }}>
+          {galleryEntries.map((entry) => (
+            <ClasspectGlyph
+              key={`zip-${entry.idx}`}
+              ref={(r) => { hiddenGlyphRefs.current[entry.idx] = r; }}
+              className={entry.p.class}
+              aspectName={entry.p.aspect}
+              size={512}
+              showButtons={false}
+              animate={false}
+              canonCharacters={[{ lunarsway: entry.p.moon }]}
+              substance={buildSubstance(entry.idx)}
+            />
+          ))}
+        </div>,
+        document.body
+      )}
+    </>
   );
 };
 

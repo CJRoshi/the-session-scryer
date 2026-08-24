@@ -58,15 +58,25 @@
      Rage render with no filter, same as the rest of the aspects.
    - 'none': passthrough, no filters anywhere. Reserved for future
      uses (e.g. PNG export wanting maximally true colors). */
+
+// Sharp 4-cardinal-direction white outline built from stacked 0-blur
+// drop-shadows.
+const SHARP_OUTLINE_WHITE =
+  'drop-shadow(1px 0 0 rgba(255,255,255,1))' +
+  ' drop-shadow(-1px 0 0 rgba(255,255,255,1))' +
+  ' drop-shadow(0 1px 0 rgba(255,255,255,1))' +
+  ' drop-shadow(0 -1px 0 rgba(255,255,255,1))';
+
+// Glow strengths reduced across the board.
 const ASPECT_GLOW_FILTERS_INSIDE = {
-  'Doom':  'brightness(2.4) drop-shadow(0 0 3px rgba(255,255,255,1)) drop-shadow(0 0 7px rgba(255,255,255,0.7))',
-  'Void':  'brightness(2.8) drop-shadow(0 0 4px rgba(255,255,255,1)) drop-shadow(0 0 9px rgba(255,255,255,0.8))',
-  'Blood': 'drop-shadow(0 0 2.5px rgba(255,255,255,0.85)) drop-shadow(0 0 6px rgba(255,255,255,0.45))',
-  'Rage':  'drop-shadow(0 0 1.8px rgba(255,255,255,0.55)) drop-shadow(0 0 4px rgba(255,255,255,0.25))',
+  'Doom':  `brightness(1.9) ${SHARP_OUTLINE_WHITE} drop-shadow(0 0 2px rgba(255,255,255,0.85)) drop-shadow(0 0 5px rgba(255,255,255,0.4))`,
+  'Void':  `brightness(2.2) ${SHARP_OUTLINE_WHITE} drop-shadow(0 0 3px rgba(255,255,255,0.85)) drop-shadow(0 0 6px rgba(255,255,255,0.45))`,
+  'Blood': `${SHARP_OUTLINE_WHITE} drop-shadow(0 0 2px rgba(255,255,255,0.5)) drop-shadow(0 0 4px rgba(255,255,255,0.25))`,
+  'Rage':  `${SHARP_OUTLINE_WHITE} drop-shadow(0 0 1.5px rgba(255,255,255,0.35)) drop-shadow(0 0 3px rgba(255,255,255,0.15))`,
 };
 const ASPECT_GLOW_FILTERS_DARK = {
-  'Doom':  'brightness(2.4) drop-shadow(0 0 3px rgba(255,255,255,1)) drop-shadow(0 0 7px rgba(255,255,255,0.7))',
-  'Void':  'brightness(2.8) drop-shadow(0 0 4px rgba(255,255,255,1)) drop-shadow(0 0 9px rgba(255,255,255,0.8))',
+  'Doom':  `brightness(1.9) ${SHARP_OUTLINE_WHITE} drop-shadow(0 0 2px rgba(255,255,255,0.85)) drop-shadow(0 0 5px rgba(255,255,255,0.4))`,
+  'Void':  `brightness(2.2) ${SHARP_OUTLINE_WHITE} drop-shadow(0 0 3px rgba(255,255,255,0.85)) drop-shadow(0 0 6px rgba(255,255,255,0.45))`,
 };
 function aspectGlowTable(mode) {
   if (mode === 'dark') return ASPECT_GLOW_FILTERS_DARK;
@@ -77,44 +87,35 @@ function aspectGlowTable(mode) {
 const SessionGrid = React.forwardRef(({ session, moonCursor, onToggle, onClear = null, overlays = [], focusMoon = null,
                        onPlayerHover = null, onPlayerClick = null,
                        hoveredPlayerIdx = null, pinnedPlayerIdx = null,
-                       /* Wave 11a: optional per-cell tint underlay. When
-                          provided, called once per integer cell with
-                          (classVal, aspectVal) and expected to return a
-                          fill color (or null to skip). Drawn BEFORE the
-                          grid lines so the wash sits under everything. */
                        gridTint = null,
-                       /* Phase C: per-aspect glow filter set. See
-                          aspectGlowTable() — 'inside' (default) keeps
-                          the Phase B v8.4 tuning for the results scene's
-                          blue backdrop; 'dark' drops the Blood/Rage
-                          halos for entry-view usage on a plain dark
-                          panel; 'none' disables all filters. */
                        glowMode = 'inside',
-                       /* Phase H: optional non-session icons painted on
-                          the grid for flavor (e.g. HSOD's "Magician of
-                          All"). Each entry: { x, y, label, moon, card? },
-                          in classpect-space coords (NOT pixels). Rendered
-                          after all overlays so phantoms sit on top. They
-                          never collide with real session members for
-                          stats — purely decorative. Clicking calls
-                          onPhantomClick(index) so the caller can pin a
-                          custom card. */
+                       
                        phantomMembers = [],
                        onPhantomClick = null,
                        pinnedPhantomIdx = null }, svgRef) => {
   const glowTable = aspectGlowTable(glowMode);
   const scale = 30, centerX = 280, centerY = 200;
-  const toSvgX = v => centerX + v * scale;
-  const toSvgY = v => centerY - v * scale;
 
-  // Lookup map: "Class|Aspect" → aggregated cell info. Each cell tracks
-  // the full list of members sitting at that classpect (dupes allowed,
-  // May 2026), plus per-moon counts and a representative member used to
-  // pick the icon + drive the display-mode hit-area. The representative
-  // is the first session entry at the cell; its `_idx` is what hover/
-  // click callbacks report. Dupes manifest as a count badge + hover
-  // tooltip; pinning to a specific dupe isn't supported (the cell pins
-  // to the representative).
+  // Polarity — subscribe to sitewide sign convention.
+  const [polarity, setPolarity] = React.useState(() => ScryerSettings.get('polarityMode'));
+  React.useEffect(() => {
+    const onChange = (ev) => {
+      if (ev.detail?.name === 'polarityMode') setPolarity(ScryerSettings.get('polarityMode'));
+    };
+    window.addEventListener('scryer-setting-change', onChange);
+    return () => window.removeEventListener('scryer-setting-change', onChange);
+  }, []);
+  const polar = v => (polarity === 'cal' ? v : -v);
+  const toSvgX = v => centerX + polar(v) * scale;
+  const toSvgY = v => centerY - polar(v) * scale;
+
+  // Polarity-independent chrome anchors.
+  const chromeLeftX   = centerX - 7 * scale;
+  const chromeRightX  = centerX + 7 * scale;
+  const chromeTopY    = centerY - 6 * scale;
+  const chromeBottomY = centerY + 6 * scale;
+
+  // Lookup map: "Class|Aspect" → aggregated cell info.
   const cellAt = useMemo(() => {
     const m = new Map();
     session.forEach((p, idx) => {
@@ -150,6 +151,23 @@ const SessionGrid = React.forwardRef(({ session, moonCursor, onToggle, onClear =
   // assets don't leave us with a blank Y-axis.
   const [failedAspectImages, setFailedAspectImages] = useState(() => new Set());
 
+  // Sitewide axis-label preference
+  const [xLabelStyle, setXLabelStyle] = useState(
+    () => (typeof ScryerSettings !== 'undefined' ? ScryerSettings.get('graphXAxisLabels') : 'text')
+  );
+  const [yLabelStyle, setYLabelStyle] = useState(
+    () => (typeof ScryerSettings !== 'undefined' ? ScryerSettings.get('graphYAxisLabels') : 'icon')
+  );
+  useEffect(() => {
+    const onChange = (e) => {
+      if (!e.detail || typeof ScryerSettings === 'undefined') return;
+      if (e.detail.name === 'graphXAxisLabels') setXLabelStyle(ScryerSettings.get('graphXAxisLabels'));
+      if (e.detail.name === 'graphYAxisLabels') setYLabelStyle(ScryerSettings.get('graphYAxisLabels'));
+    };
+    window.addEventListener('scryer-setting-change', onChange);
+    return () => window.removeEventListener('scryer-setting-change', onChange);
+  }, []);
+
   return (
     <div className="overflow-x-auto">
       {/* viewBox padded 16px top/bottom beyond the integer grid (which spans
@@ -157,14 +175,7 @@ const SessionGrid = React.forwardRef(({ session, moonCursor, onToggle, onClear =
           crowns sitting -17px above row +6, chevrons sitting +14px below
           row -6 — render fully without clipping at the SVG border. */}
       <svg ref={svgRef} viewBox="0 -16 550 462" style={{ background: 'transparent', maxWidth: '100%', height: 'auto', display: 'block' }}>
-        {/* Phase B v3: the SVG itself is transparent so the Scryer's
-            pentagon backdrop shows through wherever the grid ISN'T —
-            i.e. behind the Y-axis aspect icons + X-axis class labels.
-            The dark interior is restricted to the actual gridded area
-            (the integer-grid rect, x=70..490, y=20..380), drawn as the
-            very first element so EVERY other layer (tints, lines,
-            axes, dots, overlays) sits on top of it. */}
-        <rect x={toSvgX(-7)} y={toSvgY(6)}
+        <rect x={chromeLeftX} y={chromeTopY}
               width={14 * scale} height={12 * scale}
               fill="#0d0d0d" stroke="none"/>
         {/* Clip rect = the integer grid (-7..7 class × -6..6 aspect).
@@ -172,32 +183,13 @@ const SessionGrid = React.forwardRef(({ session, moonCursor, onToggle, onClear =
             annuli) so they stay inside the grid box. */}
         <defs>
           <clipPath id="gridClip">
-            <rect x={toSvgX(-7)} y={toSvgY(6)}
+            <rect x={chromeLeftX} y={chromeTopY}
                   width={14 * scale} height={12 * scale}/>
           </clipPath>
-          {/* Wave 11f: blur filter for the cell-tint underlay. stdDev
-              chosen so the 14×12 grid of integer cells diffuses into a
-              continuous gradient wash. The filter region is expanded
-              with x/y/width/height so the blurred result isn't clipped
-              prematurely; the outer .tint-clip group then clips back
-              to the integer-grid box so the wash doesn't bleed into
-              axes/labels. */}
           <filter id="tintBlur" x="-25%" y="-25%" width="150%" height="150%">
             <feGaussianBlur stdDeviation="11"/>
           </filter>
         </defs>
-        {/* Wave 11a / 11f / 11g: per-cell tint underlay. Renders BEFORE
-            grid lines so the wash sits under everything. Each integer
-            cell gets a slightly-oversized rect (scale * 1.35) so
-            neighbours overlap → after the blur the result reads as a
-            continuous gradient rather than a checkerboard. opacity
-            stays low so the wash doesn't fight with player markers /
-            axes / icons. Wave 11g: cv=0 and av=0 are now included so
-            the wash extends along the axes too — no players live
-            there, but visual continuity along the axes lets a viewer
-            decipher the colormap by eye. Leadership treats classVal=0
-            and aspectVal=0 as 0 (see CLASS_LEAD_BY_VAL / ASPECT_LEAD_
-            BY_VAL in session-constants.js). */}
         {gridTint && (
           <g clipPath="url(#gridClip)" opacity="0.30" pointerEvents="none">
             <g filter="url(#tintBlur)">
@@ -229,31 +221,18 @@ const SessionGrid = React.forwardRef(({ session, moonCursor, onToggle, onClear =
         <line x1={toSvgX(-7)} y1={toSvgY(0)} x2={toSvgX(7)}  y2={toSvgY(0)} stroke="#888" strokeWidth="2"/>
         <line x1={toSvgX(0)}  y1={toSvgY(-6)} x2={toSvgX(0)} y2={toSvgY(6)} stroke="#888" strokeWidth="2"/>
 
-        {/* Y labels — aspect icons (matches rotation-graph.js pattern).
-            Default preserveAspectRatio="xMidYMid meet" letterboxes the
-            image inside the 24×24 box so non-square assets (Breath, Hope)
-            keep their natural aspect ratio rather than getting squished.
-
-            Per-aspect glow filters via ASPECT_GLOW_FILTERS below: the
-            dark / near-black aspects (Doom, Void) and the
-            high-saturation reds/magentas (Blood, Rage) all vanish on
-            the dark grid interior without help. Each gets a tuned
-            brightness boost + white drop-shadow halo so the icon body
-            reads (not just the halo) without making the BRIGHTER
-            aspects look out of place. Doom is the calibration anchor
-            (it was tuned first and the user signed off on it);
-            Void gets the heaviest treatment because its silhouette is
-            the least visually distinctive against dark. */}
+        {/* Y labels — aspect icons (matches rotation-graph.js pattern). */}
         {aspectOrder.map(asp => {
           const aspValue = aspectsNumeric[asp];
           const glowFilter = glowTable ? glowTable[asp] : null;
           const imgFailed = failedAspectImages.has(asp);
+          const useIcon = yLabelStyle === 'icon' && !imgFailed;
           return (
             <g key={`y-label-${asp}`}>
-              {!imgFailed ? (
+              {useIcon ? (
                 <image
-                  href={`./images/aspects/no-bg/${asp.toLowerCase()}.webp`}
-                  x={toSvgX(-7) - 34}
+                  href={`./images/aspects/no-bg/${asp.toLowerCase()}.svg`}
+                  x={chromeLeftX - 34}
                   y={toSvgY(aspValue) - 12}
                   width="24"
                   height="24"
@@ -261,7 +240,7 @@ const SessionGrid = React.forwardRef(({ session, moonCursor, onToggle, onClear =
                   onError={() => setFailedAspectImages(prev => new Set([...prev, asp]))}
                 />
               ) : (
-                <text x={toSvgX(-7) - 22} y={toSvgY(aspValue) + 4}
+                <text x={chromeLeftX - 22} y={toSvgY(aspValue) + 4}
                       textAnchor="middle" fontSize="9" fontFamily="Courier New"
                       fontWeight="bold" fill="#f8f8f8">
                   {aspectAbbrev[asp]}
@@ -270,23 +249,24 @@ const SessionGrid = React.forwardRef(({ session, moonCursor, onToggle, onClear =
             </g>
           );
         })}
-        {/* X labels */}
+        {/* X labels. */}
         {Object.entries(classesNumeric).map(([cls, val]) => (
-          <text key={cls} x={toSvgX(val)} y={toSvgY(-6) + 25}
-                textAnchor="middle" fontSize="11" fontFamily="Courier New" fontWeight="bold" fill="#f8f8f8">
-            {classAbbrev[cls]}
-          </text>
+          xLabelStyle === 'icon' ? (
+            <image key={cls}
+                   href={`./images/classes/outline/${cls.toLowerCase()}.svg`}
+                   x={toSvgX(val) - 12}
+                   y={chromeBottomY + 12}
+                   width="24"
+                   height="24"/>
+          ) : (
+            <text key={cls} x={toSvgX(val)} y={chromeBottomY + 25}
+                  textAnchor="middle" fontSize="11" fontFamily="Courier New" fontWeight="bold" fill="#f8f8f8">
+              {classAbbrev[cls]}
+            </text>
+          )
         ))}
 
-        {/* Per-cell rendering. When `onToggle` is supplied this grid is
-            in *entry mode* — every (class, aspect) intersection gets a
-            transparent hit-area + click handler + paint-cursor halo so
-            the user can build the session by clicking. When `onToggle`
-            is null/undefined the grid is *display-only* (results view)
-            — we skip the hit areas entirely and just draw the dots, so
-            the upcoming per-element hover content (planned for #24) can
-            own pointer events without paint-cursor noise getting in the
-            way. */}
+        {/* Per-cell rendering. */}
         {Object.entries(classesNumeric).flatMap(([cls, cv]) =>
           Object.entries(aspectsNumeric).map(([asp, av]) => {
             const cell = cellAt.get(`${cls}|${asp}`);
@@ -416,12 +396,7 @@ const SessionGrid = React.forwardRef(({ session, moonCursor, onToggle, onClear =
           })
         )}
 
-        {/* Dupes-hover tooltip (May 2026). When the user hovers a cell
-            that has more than one member, surface the moon breakdown
-            (Prospit / Derse / Dual counts with their icons). Drawn
-            AFTER all cells so it always sits on top of neighboring
-            members. Anchored above the cell unless that would clip the
-            top edge, in which case it flips below. */}
+        {/* Dupes-hover tooltip */}
         {(() => {
           if (!hover) return null;
           const cell = cellAt.get(hover);
@@ -724,18 +699,7 @@ const SessionGrid = React.forwardRef(({ session, moonCursor, onToggle, onClear =
           return null;
         })}
 
-        {/* Phantom members — non-session icons rendered after
-            all overlays. Each gets the appropriate moon icon at the
-            given classpect-space coord. The icon is clickable when
-            onPhantomClick is wired (and the phantom has card config),
-            firing onPhantomClick(index) so the parent can pin a
-            custom card mirroring the player-hover-card layout.
-            Pinned phantoms get a white selection ring same as pinned
-            real players. Native <title> on the icon gives the browser
-            hover tooltip; the on-grid text label that used to sit
-            adjacent was removed per user — the pinned card carries
-            the full identity instead, and the always-visible side
-            label felt redundant + crowded the grid. */}
+        {/* Phantom members. */}
         {phantomMembers.map((ph, i) => {
           const size = 28;
           const href = ph.moon === 'Prospit'

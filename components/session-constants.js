@@ -18,6 +18,17 @@ const aspectsNumeric = {
   Heart: 3, Doom: 4, Void: 5, Space: 6
 };
 
+/* Polarity display helpers. */
+function polaritySign(v, mode) {
+  if (v === null || v === undefined) return v;
+  return mode === 'cal' ? v : -v;
+}
+function polarityValueString(v, mode) {
+  const f = polaritySign(v, mode);
+  if (f === null || f === undefined) return '';
+  return f >= 0 ? `+${f}` : `${f}`;
+}
+
 const classAbbrev = {
   "Lord": "Ld", "Witch": "Wi", "Prince": "Pc", "Thief": "Tf",
   "Knight": "Nt", "Mage": "Mg", "Sylph": "Sy",

@@ -910,7 +910,6 @@ const SPECIAL_SESSIONS = {
 
   /* =====================================================================
      OC — CounterQuest Pre-Scratch (CQ1 / STERA v2.0)
-     Thorn / Ebony share the slot; encoded as Dual moon.
      ===================================================================== */
   'cq1': {
     id:          'cq1',
@@ -925,7 +924,7 @@ const SPECIAL_SESSIONS = {
     members: [
       { characterKey: 'Aonara Kruxit', moon: 'Derse',   symbol: './images/special/symbols/oc/taurmini.png',    name: null },
       { characterKey: 'Vérité Agtier', moon: 'Prospit', symbol: './images/special/symbols/oc/virus.png',       name: null },
-      { characterKey: 'Thorn Derosin', moon: 'Dual',    symbol: './images/special/symbols/oc/Thorn_Symbol.png', name: 'Thorn / Ebony Derosin' },  // shared slot — display as "Thorn / Ebony"
+      { characterKey: 'Thorn Derosin', moon: 'Dual',    symbol: './images/special/symbols/oc/Thorn_Symbol.png', name: 'Thorn / Ebony' },  // shared slot — display as "Thorn / Ebony"
       { characterKey: 'Dawn Westwood', moon: 'Prospit', symbol: './images/special/symbols/oc/Dawn_Symbol.png', name: null },
       { characterKey: 'Nunki Aerwynn', moon: 'Derse',   symbol: './images/special/symbols/oc/Nunki_Symbol.png', name: null },
       { characterKey: 'Jace Ferreiro', moon: 'Derse',   symbol: './images/special/symbols/oc/Jace_Symbol.png', name: null },
@@ -1293,7 +1292,7 @@ const OOPS_CLASS_PLURALS = {
    in scry.html's SPECIAL_DIVE.
    ========================================================================= */
 SPECIAL_SESSIONS['hsod'] = (function buildHsodEntry() {
-  const code = '1621C22112222412422522622712912A02B12C12C13223423513623723923923923A03A23B04124704914A15105215315425525625725815825915B15B25C16126216226316426516716826916B26C27117327417417727917927C18118418518728A28B28C29129219429809919B09C1A12A22A32A42A51A71AB2AC1B22B30B42B62B80B91BC1C21C32C41C52C92CA2CB2D12D22D32D41D51D71D91DB2DC1E20E90EA1EC0';
+  const code = '1C22112222412422522622712912A02B12C12C13223423513623723923923923A03A23B04124704914A15105215315425525625725815825915B15B25C16126216226316426516716826916B26C27117327417417727817917927C18118418518728A28B28C29129219429809919B09C1A12A22A32A42A51A62A71AB2AC1B22B30B42B62B91BC1C21C32C41C52C92CA2CB2D12D22D32D41D51D71D91DB2DC1E20E90EA1EC0';
   const decoded = decodeSession(code);
   if (decoded.errors && decoded.errors.length > 0) {
     console.warn('[special-sessions] HSOD code failed to decode cleanly:', decoded.errors);
