@@ -990,7 +990,7 @@ const SPECIAL_SESSIONS = {
       lunarProspit: {
         header:   { speaker: 'Thorn Derosin', text: "Three of us were on this moon, including Ebony flitting between the two." },
         activity: { speaker: 'Thorn Derosin', text: "I suppose my presence makes our weak activity unsurprising." },
-        center:   { speaker: 'Thorn Derosin', text: "Sepse unë jam edhe qendra, këtu." },
+        center:   { speaker: 'Thorn Derosin', text: "Sepse unë jam qendra këtu." },
         rep:      { speaker: 'Thorn Derosin', text: "And so the halls of Prospit represent us best." },
       },
       lunarDerse: {
@@ -1173,7 +1173,7 @@ const SPECIAL_SESSIONS = {
       closestKnit: {
         lines: [
           {speaker: null, text: "[Mage of Time]"},
-          {speaker: "Thorn Derosin", text: "Ka kuptim, këtë! Of course I would be closest with everyone-- my journey put me in contact with more of everybody than anybody!"}
+          {speaker: "Thorn Derosin", text: "Kjo paska kuptim! Of course I would be closest with everyone-- my journey put me in contact with more of everybody than anybody!"}
         ]
       },
       leader: {
