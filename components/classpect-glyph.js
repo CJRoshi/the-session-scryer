@@ -257,8 +257,9 @@ async function rasterize(url, targetLongSide) {
 }
 
 function pixelBboxFraction(rgba, w, h, alphaThresh = 32) {
-  // Backward-compat with the old (rgba, size) signature.
-  if (typeof h !== 'number') { alphaThresh = h ?? alphaThresh; h = w; }
+  // Both w and h required — the old single-`size` shim was masking a
+  // bug where a numeric alpha threshold in the h slot truncated the
+  // scan to 32 rows.
   let minX = w, maxX = -1, minY = h, maxY = -1;
   for (let y = 0; y < h; y++) {
     const row = y * w;
@@ -288,7 +289,8 @@ async function loadRingGeometry(className) {
 
   const { rgba, size } = raster;
   const A = 32;
-  const outerBbox = pixelBboxFraction(rgba, size, A);
+  // Rings are square-ish; pass size for both dims explicitly.
+  const outerBbox = pixelBboxFraction(rgba, size, size, A);
   if (!outerBbox) return { outerFrac: 0.9, holeFrac: 0.46, holeCxFrac: 0.5, holeCyFrac: 0.5, img: raster.img, url };
 
   const outerCxFrac = outerBbox.xFrac + outerBbox.wFrac / 2;
