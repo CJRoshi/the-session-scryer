@@ -1369,6 +1369,10 @@
          hang a hair past grid-host's outer edge without ever crossing
          the axis onto its own member. */
       min-width: 380px;
+      /* Fixed ceiling so unusually long content (e.g., a member's
+         full chumhandle in the name row) can't stretch the box.
+         Text inside wraps / shrinks to fit instead. */
+      max-width: 430px;
       background: #f8f8f8;
       border: 1px solid rgba(60, 50, 40, 0.45);
       border-radius: 6px;
@@ -1440,24 +1444,77 @@
     .player-hover-card .phc-head {
       display: flex;
       flex-direction: column;
-      align-items: flex-start;
+      /* stretch (default) so child rows fill the card width. */
+      align-items: stretch;
       gap: 4px;
       margin-bottom: 10px;
     }
     
     .player-hover-card .phc-name-line {
-      display: inline-flex;
+      display: flex;
       align-items: center;
       gap: 8px;
       font-size: 22px;
       line-height: 1.1;
+      /* Reserve space so long handles / big classpect text can't
+         crowd the absolute-positioned close X in the top-right. */
+      padding-right: 34px;
+      min-width: 0;
+    }
+    /* The name text sits in a shrinkable flex slot. */
+    .player-hover-card .phc-name-fit {
+      flex: 1 1 auto;
+      min-width: 0;
+      overflow: hidden;
+    }
+    /* Cycle chip lives on its own row above the name so long handles
+       never push it off-screen. Sits at the LEFT edge. */
+    .player-hover-card .phc-cycle-row {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      align-self: flex-start;
+      font-size: 12px;
+      color: #5a5040;
+    }
+    .player-hover-card .phc-cycle-btn {
+      background: rgba(0,0,0,0.08);
+      border: 1px solid rgba(0,0,0,0.25);
+      color: inherit;
+      padding: 0 8px;
+      line-height: 1.4;
+      cursor: pointer;
+      border-radius: 3px;
+      font-family: inherit;
+      font-weight: bold;
+      font-size: 14px;
+    }
+    .player-hover-card .phc-cycle-btn:hover { background: rgba(0,0,0,0.16); }
+    .player-hover-card .phc-cycle-count {
+      font-family: 'Courier New', monospace;
     }
     .player-hover-card .phc-title-line {
-      display: inline-flex;
+      display: flex;
       align-items: center;
       gap: 0.35em;
       font-size: 26px;
       line-height: 1;
+      min-width: 0;
+    }
+    /* Text portion of the classpect line is flexible + shrinks; icons
+       (fixed 1.1em on the right) stay at their natural size. */
+    .player-hover-card .phc-title-fit {
+      flex: 1 1 auto;
+      min-width: 0;
+      overflow: hidden;
+    }
+    /* Override ClasspectLink's hard-coded size classes inside FitText
+       so the wrapper's dynamic font-size actually cascades down. */
+    .player-hover-card .phc-title-fit .cc-classpect-link,
+    .player-hover-card .phc-title-fit .cc-classpect-link.is-large,
+    .player-hover-card .phc-title-fit .cc-classpect-link.is-medium,
+    .player-hover-card .phc-title-fit .cc-classpect-link.is-small {
+      font-size: inherit;
     }
     
     .player-hover-card .phc-inline-icon {
@@ -1500,6 +1557,17 @@
       object-fit: contain;
       image-rendering: pixelated;
       filter: drop-shadow(0 1px 2px rgba(120, 100, 70, 0.4));
+    }
+    /* Named-cycle moon highlight: the current member's moon lights up
+       with a bright chip while the others fade back. */
+    .player-hover-card .phc-dupe-entry.is-active {
+      background: rgba(255, 220, 120, 0.35);
+      padding: 1px 6px;
+      border-radius: 4px;
+      box-shadow: inset 0 0 0 1px rgba(200, 160, 60, 0.6);
+    }
+    .player-hover-card .phc-dupe-row:has(.is-active) .phc-dupe-entry:not(.is-active) {
+      opacity: 0.45;
     }
     
     .player-hover-card .phc-character-symbol {
@@ -1617,12 +1685,7 @@
       letter-spacing: 0.2px;
     }
 
-    /* Phase H bump: 900 → 1280. Catches iPad portrait (1024–1253 CSS px
-       on common iPads) which was using desktop layout and overflowing,
-       forcing the user to pinch-zoom out. 1280 is one px above
-       laptop-13 widths but below typical desktop windows; the wider
-       end stays on the wide layout, everything narrower (iPad portrait,
-       phones, ultra-narrow laptop windows) falls back to mobile. */
+    /* Phase H bump: 900 → 1280. */
     @media (max-width: 1280px) {
       .orb-hover-card,
       .player-hover-card {
@@ -1643,6 +1706,18 @@
       .player-hover-card:not(.pinned) {
         display: none;
       }
+    }
+
+    /* Shrink the title + name lines below 700px so the ClasspectLink
+       row (text + class/aspect/moon icons) stops overflowing narrow
+       cards. Icons scale with the parent font. */
+    @media (max-width: 700px) {
+      .player-hover-card .phc-title-line { font-size: 20px; }
+      .player-hover-card .phc-name-line  { font-size: 18px; }
+    }
+    @media (max-width: 480px) {
+      .player-hover-card .phc-title-line { font-size: 18px; }
+      .player-hover-card .phc-name-line  { font-size: 16px; }
     }
 
     @media (max-width: 1280px) {
@@ -1839,8 +1914,55 @@
 <script type="text/babel" src="./components/scryer-footer.js"></script>
 
 <script type="text/babel">
-const { useState, useMemo, useRef, useEffect } = React;
+const { useState, useMemo, useRef, useEffect, useLayoutEffect } = React;
 const { ScryingBall, ScryingInterior, ScryerHeader, ScryerFooter } = window;
+
+/* FitText — scales font-size so the child text fits on ONE line
+   inside its parent's content width. */
+const FitText = ({ children, maxFontSize = 22, minFontSize = 10, className = '', style = {} }) => {
+  const ref = useRef(null);
+  const [fontSize, setFontSize] = useState(maxFontSize);
+  // Extrapolate natural width at max from the CURRENT render, rather
+  // than mutating el.style directly (which desynced from React state
+  // on the second measure pass and stuck the DOM at maxFontSize).
+  // Text width scales ~linearly with font-size, so:
+  //   naturalAtMax ≈ currentWidth × (maxFontSize / currentFontSize)
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el || !el.parentElement) return;
+    const currentWidth = el.getBoundingClientRect().width;
+    if (currentWidth <= 0 || fontSize <= 0) return;
+    const naturalAtMax = currentWidth * maxFontSize / fontSize;
+    const available = el.parentElement.getBoundingClientRect().width - 2;
+    let next;
+    if (available > 0 && naturalAtMax > available) {
+      next = Math.max(minFontSize, Math.floor(maxFontSize * available / naturalAtMax));
+    } else {
+      next = maxFontSize;
+    }
+    if (next !== fontSize) setFontSize(next);
+  });
+  // Re-fit whenever the PARENT's width changes (card resize, viewport
+  // rotation, sibling layout shift). Triggers a state read via a
+  // forced dummy update so the useLayoutEffect above re-runs.
+  const [, bumpTick] = useState(0);
+  useEffect(() => {
+    const parent = ref.current && ref.current.parentElement;
+    if (!parent || typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(() => bumpTick(t => t + 1));
+    ro.observe(parent);
+    return () => ro.disconnect();
+  }, []);
+  return (
+    <span ref={ref} className={className} style={{
+      display: 'inline-block',
+      whiteSpace: 'nowrap',
+      fontSize: fontSize + 'px',
+      lineHeight: 'inherit',
+      ...style,
+    }}>{children}</span>
+  );
+};
 
 /* Per-special-session dive customization. */
 function cqDiveRoll() {
@@ -1947,15 +2069,36 @@ function pluralizeClass(cls) {
   return cls + 's';
 }
 
-function dedupeRanked(ranked) {
+function dedupeRanked(ranked, slotMemberByIdx) {
+  // Group consecutive rows sharing class+aspect.
   const out = [];
-  for (const r of ranked) {
-    const last = out[out.length - 1];
-    if (last && last.player.class === r.player.class && last.player.aspect === r.player.aspect) {
-      last.dupeCount = (last.dupeCount || 1) + 1;
-    } else {
-      out.push({ ...r, dupeCount: 1 });
+  const map = slotMemberByIdx || [];
+  let i = 0;
+  let rank = 0;
+  while (i < ranked.length) {
+    let j = i;
+    while (j < ranked.length
+           && ranked[j].player.class  === ranked[i].player.class
+           && ranked[j].player.aspect === ranked[i].player.aspect) j++;
+    rank += 1;
+    const groupRows = ranked.slice(i, j);
+    const namedRows = [];
+    let anonCount = 0;
+    let anonFirst = null;
+    for (const r of groupRows) {
+      const entry = r.playerIdx != null ? map[r.playerIdx] : null;
+      if (entry) {
+        namedRows.push({ ...r, dupeCount: 1, memberEntry: entry, rank });
+      } else {
+        anonCount += 1;
+        if (!anonFirst) anonFirst = r;
+      }
     }
+    for (const nr of namedRows) out.push(nr);
+    if (anonCount > 0) {
+      out.push({ ...(anonFirst || groupRows[0]), dupeCount: anonCount, memberEntry: null, rank });
+    }
+    i = j;
   }
   return out;
 }
@@ -1993,6 +2136,45 @@ const SelfTestPanel = ({ results }) => {
 
 const ResultsView = ({ session, sessionCode = '', gridOverlays, lunarFocus = 'all', onLunarFocus, onLunarHover, focusMoon = null, activeMoon = null, onKnitHover = null, subRep = null, specialContext = null, charLookup = {} }) => {
   const empty = session.length === 0;
+
+  // Pair each named roster member to a specific session slot (by
+  // class+aspect+moon, falling back to class+aspect) so that
+  // downstream consumers — gallery labels, arc names, the leader
+  // ranking rows, the pinned card — can tell which individual slots
+  // are named and which are anonymous. See GlyphGallery / the card
+  // for the two places that used to compute this locally on
+  // class+aspect only, which conflated named + unnamed dupes.
+  const slotMemberByIdx = useMemo(() => {
+    const map = new Array(session.length).fill(null);
+    if (!specialContext || !Array.isArray(specialContext.members)) return map;
+    const claimed = new Array(session.length).fill(false);
+    for (const memberEntry of specialContext.members) {
+      const cd = charLookup?.[memberEntry.characterKey];
+      if (!cd || !Array.isArray(cd.classpect)) continue;
+      const wantClass  = cd.classpect[0];
+      const wantAspect = cd.classpect[1];
+      const wantMoon   = memberEntry.moon || cd.lunarsway || null;
+      // Pass 1 — exact class+aspect+moon.
+      let paired = -1;
+      for (let i = 0; i < session.length; i++) {
+        if (claimed[i]) continue;
+        const q = session[i];
+        if (q.class === wantClass && q.aspect === wantAspect && q.moon === wantMoon) { paired = i; break; }
+      }
+      if (paired === -1) {
+        for (let i = 0; i < session.length; i++) {
+          if (claimed[i]) continue;
+          const q = session[i];
+          if (q.class === wantClass && q.aspect === wantAspect) { paired = i; break; }
+        }
+      }
+      if (paired !== -1) {
+        claimed[paired] = true;
+        map[paired] = memberEntry;
+      }
+    }
+    return map;
+  }, [session, specialContext, charLookup]);
 
   // Polarity mode — sitewide sign convention. Every fmtSigned /
   // fmtFloat call below routes through polarityValueString /
@@ -2166,10 +2348,13 @@ const ResultsView = ({ session, sessionCode = '', gridOverlays, lunarFocus = 'al
   // Per-player interaction state.
   const [hoveredPlayerIdx, setHoveredPlayerIdx] = useState(null);
   const [pinnedPlayerIdx,  setPinnedPlayerIdx]  = useState(null);
+  // Name-cycle index for classpects shared by multiple special-session
+  // members (e.g., two Dirks). Resets whenever the pin changes.
+  const [nameCycleIdx, setNameCycleIdx] = useState(0);
+  useEffect(() => { setNameCycleIdx(0); }, [pinnedPlayerIdx]);
   const handlePlayerClick = idx => {
     setPinnedPlayerIdx(prev => prev === idx ? null : idx);
-    // Phantom and player cards are mutually exclusive — clicking a real
-    // player dismisses any pinned phantom so we never overlay two cards.
+    // Phantom and player cards are mutually exclusive.
     setPinnedPhantomIdx(null);
   };
   const activePlayerIdx = pinnedPlayerIdx ?? hoveredPlayerIdx;
@@ -2699,7 +2884,7 @@ const ResultsView = ({ session, sessionCode = '', gridOverlays, lunarFocus = 'al
       leaderNote = `Explicit ${fmtSigned(topExplicit.score)} · Implicit ${fmtSigned(topImplicit.score)}`;
     }
 
-    const rankedUnique = dedupeRanked(lead.ranked);
+    const rankedUnique = dedupeRanked(lead.ranked, slotMemberByIdx);
     leaderValue = (
       <>
         <QuipBlock slotKey="leader">{quip}</QuipBlock>
@@ -2709,39 +2894,32 @@ const ResultsView = ({ session, sessionCode = '', gridOverlays, lunarFocus = 'al
               const sideClass = r.side.toLowerCase();
               const scoreText = r.side === 'Balanced' ? '0' : fmtSigned(r.score);
               const dupeSuffix = r.dupeCount > 1 ? ` (x${r.dupeCount})` : '';
-              // Find this player's special-session member entry (if any)
-              // to surface their name + text color in the ranking row.
+              // Named rows carry their memberEntry directly (from
+              // dedupeRanked); anonymous rows fall back to the classpect
+              // link. When multiple named members tie at the same
+              // classpect rank they share `r.rank`, and any remaining
+              // unnamed slots collapse into a single (x N) row below.
               let nameNode = cpLinkSmall(r);
-              if (specialContext && specialContext.members) {
-                const memberEntry = specialContext.members.find(
-                  m => {
-                    const cd = charLookup[m.characterKey];
-                    
-                    if (!cd || !Array.isArray(cd.classpect)) return false;
-                    return cd.classpect[0] === r.player.class && cd.classpect[1] === r.player.aspect;
-                  }
+              if (r.memberEntry) {
+                const cd = charLookup[r.memberEntry.characterKey];
+                const displayName = r.memberEntry.name || r.memberEntry.characterKey;
+                nameNode = (
+                  <span style={{
+                          color: cd ? cd.color : undefined,
+                          fontWeight: 'bold',
+                          cursor: 'pointer',
+                          textDecoration: 'underline',
+                          textDecorationColor: 'rgba(60, 50, 40, 0.3)',
+                          textUnderlineOffset: '3px',
+                        }}
+                        onClick={() => window.__cp_focusPlayer && window.__cp_focusPlayer(r.player.class, r.player.aspect)}>
+                    {displayName}
+                  </span>
                 );
-                if (memberEntry) {
-                  const cd = charLookup[memberEntry.characterKey];
-                  const displayName = memberEntry.name || memberEntry.characterKey;
-                  nameNode = (
-                    <span style={{
-                            color: cd ? cd.color : undefined,
-                            fontWeight: 'bold',
-                            cursor: 'pointer',
-                            textDecoration: 'underline',
-                            textDecorationColor: 'rgba(60, 50, 40, 0.3)',
-                            textUnderlineOffset: '3px',
-                          }}
-                          onClick={() => window.__cp_focusPlayer && window.__cp_focusPlayer(r.player.class, r.player.aspect)}>
-                      {displayName}
-                    </span>
-                  );
-                }
               }
               return (
                 <div key={i} className={`rank-row ${sideClass}`}>
-                  <span className="rank-num">{i + 1}.</span>
+                  <span className="rank-num">{r.rank}.</span>
                   <span className="rank-name">
                     {nameNode}
                     {dupeSuffix && <span className="rank-dupe">{dupeSuffix}</span>}
@@ -3123,28 +3301,99 @@ const ResultsView = ({ session, sessionCode = '', gridOverlays, lunarFocus = 'al
         {(() => {
           
           let nameRow = null;
+          // `cycleActiveMoons` — set of moons whose dupe-row entries
+          // should be highlighted. For a named entry: just that
+          // member's moon. For the generic entry: every moon that
+          // holds at least one *unnamed* slot at this classpect
+          // (so you can see who the anonymous glyphs represent).
+          // Empty set = highlight none (visually equivalent to
+          // highlighting all, per the existing CSS convention).
+          let cycleActiveMoons = new Set();
           if (specialContext && specialContext.members) {
-            const memberEntry = specialContext.members.find(m => {
+            const namedMatches = specialContext.members.filter(m => {
               const cd = charLookup[m.characterKey];
-              
               if (!cd || !Array.isArray(cd.classpect)) return false;
               return cd.classpect[0] === p.class && cd.classpect[1] === p.aspect;
             });
-            if (memberEntry) {
-              const cd = charLookup[memberEntry.characterKey];
-              const displayName = memberEntry.name || memberEntry.characterKey;
-              const nameColor = cd ? cd.color : '#ffffff';
-              nameRow = (
-                <div className="phc-name-line">
-                  {memberEntry.symbol && (
-                    <img className="phc-character-symbol"
-                         src={memberEntry.symbol}
-                         alt={displayName}/>
-                  )}
-                  <span style={{ color: nameColor, fontWeight: 'bold' }}>
-                    {displayName}
-                  </span>
+            // Total session members at this classpect (named + unnamed).
+            const totalAtClasspect = session.filter(
+              q => q.class === p.class && q.aspect === p.aspect).length;
+            // Per-moon count of *named* members at this classpect —
+            // used both to decide which moons hold unnamed slots
+            // (dupeCounts[moon] > namedInMoon) and to drive the
+            // generic entry's multi-moon highlight.
+            const namedInMoon = { Prospit: 0, Derse: 0, Dual: 0 };
+            for (const m of namedMatches) {
+              const cd = charLookup[m.characterKey];
+              const mn = m.moon || (cd && cd.lunarsway) || null;
+              if (mn && namedInMoon[mn] != null) namedInMoon[mn] += 1;
+            }
+            const unnamedMoonSet = new Set();
+            ['Prospit', 'Derse', 'Dual'].forEach(mn => {
+              if (dupeCounts && dupeCounts[mn] > namedInMoon[mn]) unnamedMoonSet.add(mn);
+            });
+            // If some are unnamed, prepend a synthetic "generic"
+            // entry so the carousel can toggle between the named
+            // subset and the anonymous group.
+            const hasUnnamed = totalAtClasspect > namedMatches.length;
+            const cycleEntries = (hasUnnamed && namedMatches.length > 0)
+              ? [{ generic: true, unnamedMoons: unnamedMoonSet }, ...namedMatches.map(m => ({ member: m }))]
+              : namedMatches.map(m => ({ member: m }));
+
+            if (cycleEntries.length > 0) {
+              const idx = ((nameCycleIdx % cycleEntries.length) + cycleEntries.length) % cycleEntries.length;
+              const current = cycleEntries[idx];
+
+              // Cycle chip lives on its own row above the name so long
+              // handles never crowd it off-screen. Rendered only when
+              // there's more than one carousel entry.
+              const cycleRow = cycleEntries.length > 1 ? (
+                <div className="phc-cycle-row">
+                  <button className="phc-cycle-btn"
+                          onClick={() => setNameCycleIdx(idx - 1)}
+                          title="Previous" aria-label="Previous">‹</button>
+                  <span className="phc-cycle-count">{idx + 1}/{cycleEntries.length}</span>
+                  <button className="phc-cycle-btn"
+                          onClick={() => setNameCycleIdx(idx + 1)}
+                          title="Next" aria-label="Next">›</button>
                 </div>
+              ) : null;
+
+              let nameLine = null;
+              if (current.generic) {
+                // Anonymous view — skip the name line entirely and
+                // instead surface which moons the unnamed slots
+                // occupy by highlighting them in the dupe-row.
+                cycleActiveMoons = current.unnamedMoons || new Set();
+              } else {
+                const memberEntry = current.member;
+                const cd = charLookup[memberEntry.characterKey];
+                const displayName = memberEntry.name || memberEntry.characterKey;
+                const nameColor = cd ? cd.color : '#ffffff';
+                const activeMoon = (memberEntry.moon || (cd && cd.lunarsway) || null);
+                if (activeMoon) cycleActiveMoons = new Set([activeMoon]);
+                nameLine = (
+                  <div className="phc-name-line">
+                    {memberEntry.symbol && (
+                      <img className="phc-character-symbol"
+                           src={memberEntry.symbol}
+                           alt={displayName}/>
+                    )}
+                    <span className="phc-name-fit">
+                      <FitText maxFontSize={22}>
+                        <span style={{ color: nameColor, fontWeight: 'bold' }}>
+                          {displayName}
+                        </span>
+                      </FitText>
+                    </span>
+                  </div>
+                );
+              }
+              nameRow = (
+                <React.Fragment>
+                  {cycleRow}
+                  {nameLine}
+                </React.Fragment>
               );
             }
           }
@@ -3152,11 +3401,16 @@ const ResultsView = ({ session, sessionCode = '', gridOverlays, lunarFocus = 'al
             <div className="phc-head">
               {nameRow}
               <div className="phc-title-line">
-                <ClasspectLink className={p.class} aspectName={p.aspect}
-                               target="cc" size="large"/>
-                {/* Discord-preferred layout: [Class] of [Aspect] [class icon]
-                    [aspect icon] [moon]. Class icon uses the outline variant
-                    so it reads clearly against the card's varying backgrounds. */}
+                {/* Text portion sits in a shrinkable flex slot;
+                    icons stay at their natural size on the right.
+                    FitText scales the classpect text down (up to
+                    26px max) so it never overflows the card. */}
+                <span className="phc-title-fit">
+                  <FitText maxFontSize={26}>
+                    <ClasspectLink className={p.class} aspectName={p.aspect}
+                                   target="cc" size="large"/>
+                  </FitText>
+                </span>
                 <img className="phc-inline-icon phc-class-icon"
                      src={`./images/classes/outline/${p.class.toLowerCase()}.svg`}
                      alt={p.class}/>
@@ -3172,24 +3426,19 @@ const ResultsView = ({ session, sessionCode = '', gridOverlays, lunarFocus = 'al
               </div>
               {hasDupes && (
                 <div className="phc-dupe-row">
-                  {dupeCounts.Prospit > 0 && (
-                    <span className="phc-dupe-entry">
-                      <img src="./images/moons/no_bg/prospit_no-bg.png" alt="Prospit"/>
-                      x{dupeCounts.Prospit}
+                  {/* Each moon entry gets `is-active` if it belongs
+                      to the currently-cycled set: for a named entry
+                      that's the single moon the member sleeps on,
+                      for the generic entry it's every moon that
+                      holds an unnamed slot. Empty set = highlight
+                      none (visually equivalent to highlighting all). */}
+                  {['Prospit', 'Derse', 'Dual'].map(moon => dupeCounts[moon] > 0 && (
+                    <span key={moon}
+                          className={`phc-dupe-entry${cycleActiveMoons.has(moon) ? ' is-active' : ''}`}>
+                      <img src={`./images/moons/no_bg/${moon.toLowerCase()}_no-bg.png`} alt={moon}/>
+                      x{dupeCounts[moon]}
                     </span>
-                  )}
-                  {dupeCounts.Derse > 0 && (
-                    <span className="phc-dupe-entry">
-                      <img src="./images/moons/no_bg/derse_no-bg.png" alt="Derse"/>
-                      x{dupeCounts.Derse}
-                    </span>
-                  )}
-                  {dupeCounts.Dual > 0 && (
-                    <span className="phc-dupe-entry">
-                      <img src="./images/moons/no_bg/dual_no-bg.png" alt="Dual"/>
-                      x{dupeCounts.Dual}
-                    </span>
-                  )}
+                  ))}
                 </div>
               )}
             </div>
@@ -3670,6 +3919,7 @@ const ResultsView = ({ session, sessionCode = '', gridOverlays, lunarFocus = 'al
           luna={luna}
           specialContext={specialContext}
           charLookup={charLookup}
+          slotMemberByIdx={slotMemberByIdx}
         />
       )}
       {/* S+P+I+N discoverability hint — appears after 1.5s of holding
@@ -3700,7 +3950,7 @@ const ResultsView = ({ session, sessionCode = '', gridOverlays, lunarFocus = 'al
    GlyphGallery — grid of plain glyphs + click-to-annotated popup
                   + download-session button.
    ----------------------------------------------------------------- */
-const GlyphGallery = ({ session, lead, odd, knit, cen, luna, specialContext, charLookup }) => {
+const GlyphGallery = ({ session, lead, odd, knit, cen, luna, specialContext, charLookup, slotMemberByIdx = [] }) => {
   // Viewport-width watcher — used to switch the gallery to a
   // 2-column layout with smaller glyphs on mobile. Without this the
   // fixed 4×240px grid overflowed 400px-wide phones, with tiles
@@ -3744,21 +3994,15 @@ const GlyphGallery = ({ session, lead, odd, knit, cen, luna, specialContext, cha
     return () => window.removeEventListener('scryer-setting-change', onChange);
   }, []);
 
-  // Resolve a session member's display name. Special sessions supply
-  // a `members` roster mapping (class, aspect) → known character; if
-  // this classpect matches one, we use their name (or the raw
-  // character key as fallback). Returns null for anonymous members so
-  // callers can fall back to the classpect string.
-  const memberName = (p) => {
-    if (specialContext && Array.isArray(specialContext.members)) {
-      const entry = specialContext.members.find((m) => {
-        const cd = charLookup?.[m.characterKey];
-        return cd && Array.isArray(cd.classpect)
-            && cd.classpect[0] === p.class && cd.classpect[1] === p.aspect;
-      });
-      if (entry) return entry.name || entry.characterKey;
-    }
-    return null;
+  // Resolve a session member's display name for a specific session
+  // slot. The pairing is computed once at ResultsView level and
+  // passed in via `slotMemberByIdx`; returns null for anonymous
+  // slots so callers can fall back to the "Class of Aspect" string.
+  const memberName = (p, idx) => {
+    if (idx == null) return null;
+    const entry = slotMemberByIdx[idx];
+    if (!entry) return null;
+    return entry.name || entry.characterKey;
   };
 
   // Font-family CSS string per substanceFont setting.
@@ -3843,7 +4087,7 @@ const GlyphGallery = ({ session, lead, odd, knit, cen, luna, specialContext, cha
     //   'name'      → member's known name, falls back to classpect
     //                 for anonymous members so the arc doesn't stay
     //                 blank on sessions without named characters.
-    const name = memberName(p);
+    const name = memberName(p, i);
     let topLabel = null;
     if (subTop === 'classpect') {
       topLabel = `${p.class.toUpperCase()} OF ${p.aspect.toUpperCase()}`;
@@ -3863,28 +4107,35 @@ const GlyphGallery = ({ session, lead, odd, knit, cen, luna, specialContext, cha
     };
   };
 
-  // Tile label under each gallery glyph: known name if available,
-  // else the "Class of Aspect" string. Same fallback logic as the
-  // top-arc substance, keeping the two consistent.
-  const memberLabel = (p) => memberName(p) || `${p.class} of ${p.aspect}`;
+  // Tile label under each gallery glyph. In 'name' / 'none' mode we
+  // prefer the known name; in 'classpect' mode we force the "Class of
+  // Aspect" string so the label matches what's written on the arc.
+  const memberLabel = (p, idx) => {
+    if (subTop === 'classpect') return `${p.class} of ${p.aspect}`;
+    return memberName(p, idx) || `${p.class} of ${p.aspect}`;
+  };
 
   // Deduplicated view of the roster for the gallery + ZIP export.
   // Rules:
-  //   - Named members always get their own entry.
-  //   - Anonymous members merge on classpect PLUS (when outlines are
-  //     on) lunar sway — since Prospit/Derse/Dual outlines make
+  //   - In 'name' / 'none' mode: named members always get their own
+  //     entry; anonymous members merge on classpect PLUS (when outlines
+  //     are on) lunar sway — since Prospit/Derse/Dual outlines make
   //     otherwise-identical glyphs visually distinct, they shouldn't
-  //     be collapsed. When outlines are off the sway is invisible,
-  //     so classpect alone drives the merge.
+  //     be collapsed. When outlines are off the sway is invisible, so
+  //     classpect alone drives the merge.
+  //   - In 'classpect' mode: names don't appear on the tile, so we
+  //     dedupe every slot (named or not) on classpect (+ sway if
+  //     outlines are on). Dirk + Hal collapse to "Prince of Heart × 2".
   //   - Each entry keeps `idx` (first-occurrence session index) so
-  //     click-to-popup and substance building still route to a
-  //     real session member.
+  //     click-to-popup and substance building still route to a real
+  //     session member.
   const galleryEntries = React.useMemo(() => {
     const result = [];
     const anonKeyToIdx = new Map();
+    const classpectMode = subTop === 'classpect';
     for (let i = 0; i < session.length; i++) {
       const p = session[i];
-      const nm = memberName(p);
+      const nm = classpectMode ? null : memberName(p, i);
       if (nm) {
         result.push({ p, idx: i, name: nm, count: 1 });
       } else {
@@ -3899,7 +4150,7 @@ const GlyphGallery = ({ session, lead, odd, knit, cen, luna, specialContext, cha
       }
     }
     return result;
-  }, [session, specialContext, charLookup, outlineOn]);
+  }, [session, specialContext, charLookup, outlineOn, subTop]);
 
   const startDownload = () => {
     // Pick a random member for the preview shown in the confirm dialog.
@@ -3971,8 +4222,11 @@ const GlyphGallery = ({ session, lead, odd, knit, cen, luna, specialContext, cha
       // land as separate distinguishable files rather than needing
       // the "-2" collision suffix.
       let raw;
-      if (memberName(p)) {
-        raw = memberName(p);
+      // Skip the name in 'classpect' mode so the ZIP filenames match
+      // the tile labels.
+      const nm = subTop === 'classpect' ? null : memberName(p, entry.idx);
+      if (nm) {
+        raw = nm;
       } else if (outlineOn && p.moon) {
         raw = `${p.class}-of-${p.aspect}-${p.moon}`;
       } else {
@@ -4046,7 +4300,7 @@ const GlyphGallery = ({ session, lead, odd, knit, cen, luna, specialContext, cha
               textOverflow: 'ellipsis',
               whiteSpace: 'nowrap',
             }}>
-              {memberLabel(entry.p)}
+              {memberLabel(entry.p, entry.idx)}
               {entry.count > 1 && (
                 <span style={{marginLeft: '0.35em', color: '#a0a0a0'}}>×{entry.count}</span>
               )}
@@ -4124,7 +4378,7 @@ const GlyphGallery = ({ session, lead, odd, knit, cen, luna, specialContext, cha
               substance={buildSubstance(popupIdx)}
             />
             <div className="font-courier" style={{fontSize: '0.9rem', color: '#e6e6e6', letterSpacing: '1px'}}>
-              {memberLabel(session[popupIdx])}
+              {memberLabel(session[popupIdx], popupIdx)}
             </div>
           </div>
         </div>,
@@ -4164,7 +4418,7 @@ const GlyphGallery = ({ session, lead, odd, knit, cen, luna, specialContext, cha
               substance={buildSubstance(downloadPickIdx)}
             />
             <div className="font-courier" style={{fontSize: '0.75rem', color: '#888', letterSpacing: '1px'}}>
-              Preview: {memberLabel(session[downloadPickIdx])}
+              Preview: {memberLabel(session[downloadPickIdx], downloadPickIdx)}
             </div>
             <div style={{display: 'flex', gap: '12px'}}>
               <button

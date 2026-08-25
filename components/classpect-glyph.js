@@ -745,7 +745,9 @@ const ClasspectGlyph = React.forwardRef(({
     const outerR = innerSize / 2;
     const bandThickness = Math.max(4, outerR - discR);
     const subBand = bandThickness / 7;
-    const arcR    = discR + subBand / 2;
+    // Text sits at 0.42 of the band (was 0.5 → pushed inward a
+    // smidge so glyphs stop kissing the outer edge of the 1/7 ring).
+    const arcR    = discR + subBand * 0.42;
     const fontPx  = Math.max(5, subBand * 0.9);
     const iconPx  = Math.max(6, subBand);
     
