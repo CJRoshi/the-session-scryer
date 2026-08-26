@@ -748,12 +748,48 @@ const ClasspectGlyph = React.forwardRef(({
     // Text sits at 0.42 of the band (was 0.5 → pushed inward a
     // smidge so glyphs stop kissing the outer edge of the 1/7 ring).
     const arcR    = discR + subBand * 0.42;
-    const fontPx  = Math.max(5, subBand * 0.9);
+    const baseFontPx = Math.max(5, subBand * 0.9);
     const iconPx  = Math.max(6, subBand);
-    
+
     const font    = substance.fontFamily || "'Courier New', 'Courier', monospace";
     const color   = substance.color || '#ffffff';
     const stroke  = '#121314';
+
+    // Group font-scaling — each arc spans a half-circle geometrically,
+    // but we cap the angular reach of the TEXT to keep long labels
+    // from crashing into the neighboring arc at the 12/6 corners.
+    // Cap ≈ 90° per arc: top stays within 45°→135°, left within
+    // 135°→225°, right within 315°→45°, meeting exactly at the
+    // corners with no overlap. All three arcs share the same scaled
+    // font size.
+    //
+    // Measurement uses a shared offscreen canvas.
+    const MAX_ARC_ANGLE_DEG = 90;
+    const LETTER_SPACING_PX = 1;
+    const CHAR_ADVANCE_RATIO_FALLBACK = 0.62;
+    const maxArcLen = (MAX_ARC_ANGLE_DEG * Math.PI / 180) * arcR;
+
+    const measureCtx = (typeof document !== 'undefined')
+      ? document.createElement('canvas').getContext('2d')
+      : null;
+    const textLenAt = (str, size) => {
+      if (!str) return 0;
+      const s = String(str);
+      const spacing = Math.max(0, s.length - 1) * LETTER_SPACING_PX;
+      if (measureCtx) {
+        measureCtx.font = `bold ${size}px ${font}`;
+        return measureCtx.measureText(s).width + spacing;
+      }
+      return s.length * size * CHAR_ADVANCE_RATIO_FALLBACK + spacing;
+    };
+    const naturalMax = Math.max(
+      textLenAt(substance.top,   baseFontPx),
+      textLenAt(substance.left,  baseFontPx),
+      textLenAt(substance.right, baseFontPx),
+    );
+    const fontPx = (naturalMax > maxArcLen && naturalMax > 0)
+      ? Math.max(4, baseFontPx * (maxArcLen / naturalMax))
+      : baseFontPx;
     const strokeW = Math.max(1, fontPx * 0.14);
 
     const pt = (deg) => {
