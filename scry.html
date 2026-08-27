@@ -1093,13 +1093,18 @@
     }
     .scry-card .card-value .card-ranking .rank-row {
       display: flex;
-      gap: 10px;
+      gap: 12px;
       align-items: baseline;
     }
     .scry-card .card-value .card-ranking .rank-num {
       color: #6a5a48;
-      width: 16px;
+      /* Grow with the rank; wide enough for 3-digit numbers (up to
+         the 168-classpect ceiling +1 for the group counter) without
+         crowding the name column. Right-aligned so all ranks stack
+         cleanly regardless of digit count. */
+      min-width: 34px;
       flex-shrink: 0;
+      text-align: right;
       font-family: 'Courier New', monospace;
     }
     .scry-card .card-value .card-ranking .rank-name {

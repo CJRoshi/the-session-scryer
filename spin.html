@@ -37,12 +37,16 @@
         #0a0a0a;
     }
     /* Arena — subtle rounded box that visually anchors the collision
-       bounds. The physics uses the same rect. */
+       bounds. The physics uses the same rect. `overflow: hidden` clips
+       glyphs at the border so cameo-mode bodies drifting off-arena get
+       cut off cleanly by the dark exterior instead of floating naked
+       over the page background. */
     .nkp-arena {
       position: absolute;
       background: rgba(20,20,30,0.55);
       border: 1px solid rgba(120,140,200,0.35);
       border-radius: 14px;
+      overflow: hidden;
       box-shadow:
         0 0 40px rgba(80,110,200,0.15) inset,
         0 0 60px rgba(0,0,0,0.6);
@@ -206,6 +210,21 @@ const NKP_COLLIDE_SPIN_XFER   = 0.6;  // fraction of tangential contact
                                       // velocity converted to Δomega on
                                       // body-body collision
 
+/* Cameo mode — for huge sessions (HSOD's 300+ member roster) we
+   physicalize only NKP_CAMEO_ACTIVE bodies at a time and cycle
+   through the rest. Walls become permeable: when a body drifts
+   past the arena bounds it's removed, its player pushed to the
+   back of a shuffled waiting queue, and the next queued player
+   spawns on the OPPOSITE edge with an inward velocity — creating
+   the illusion of a continuous roster while keeping physics /
+   render cost bounded. Threshold matches the 168-classpect
+   ceiling (+1) so anything larger than "one of each" trips it. */
+const NKP_CAMEO_THRESHOLD     = 169;
+const NKP_CAMEO_ACTIVE        = 100;
+const NKP_CAMEO_ENTRY_SPEED   = 200;  // px/s inward on re-entry
+const NKP_CAMEO_EXIT_BUFFER   = 6;    // extra px past the wall before
+                                      // a body is considered "gone"
+
 /* Grab-and-fling knobs. `SPIN_CURL_FACTOR` maps the rotation rate of
    the mouse velocity vector to Δomega — so a straight drag imparts
    linear speed only, but a circular wiggle (velocity vector rotates)
@@ -243,41 +262,100 @@ function nkpDecodeSessionFromHash() {
   return { code: raw, players: result.players || [] };
 }
 
-/* Build one physics body per member. Initial position is jittered
-   inside the arena; velocity is random within the ceiling; omega
-   picks up the canonical class rotation direction (Active classes
-   spin one way, Passive the other) so the arena starts with a
-   mostly-plausible mix of spin senses. */
-function nkpBuildBodies(players, arenaW, arenaH, layout) {
-  const base = nkpBaseSize(players.length, arenaW, arenaH, layout);
-  return players.map((p, i) => {
-    // Per-glyph jitter around the base size so bodies don't all
-    // look uniform (visual interest, not a physics thing).
-    const jitter = 1 + (Math.random() * 2 - 1) * NKP_SIZE_JITTER;
-    const size = Math.max(layout.sizeMin, base * jitter);
-    const r = size / 2;
-    const x = r + Math.random() * Math.max(1, arenaW - 2 * r);
-    const y = r + Math.random() * Math.max(1, arenaH - 2 * r);
-    const angle = Math.random() * Math.PI * 2;
-    const speed = NKP_INITIAL_SPEED * (0.4 + Math.random() * 0.6);
-    // Class sign (Cal convention): negative = Active. Direction of
-    // initial spin follows that so Active glyphs open going one way
-    // and Passive the other, matching the gallery's default.
-    const sign = (typeof classesNumeric !== 'undefined' && classesNumeric[p.class])
-                 ? classesNumeric[p.class] : -1;
-    const spinDir = sign < 0 ? 1 : -1;
-    return {
-      idx: i,
-      player: p,
-      size,
-      r,
-      x, y,
-      vx: Math.cos(angle) * speed,
-      vy: Math.sin(angle) * speed,
-      theta: Math.random() * 360,
-      omega: spinDir * (60 + Math.random() * NKP_INITIAL_OMEGA_MAX),
-    };
-  });
+/* Monotonically-increasing body ID — used as the React key and as
+   the handle the mouse-grab code uses to survive array reshuffles
+   in cameo mode (where bodies come and go every second or two). */
+let _nkpBodyIdSeq = 0;
+
+/* Build one physics body for `p`. Position + velocity are randomized
+   inside the arena; omega picks up the canonical class rotation
+   direction (Active classes spin one way, Passive the other) so the
+   arena starts with a mostly-plausible mix of spin senses. */
+function nkpMakeBody(p, arenaW, arenaH, layout, base) {
+  // Per-glyph jitter around the base size so bodies don't all look
+  // uniform.
+  const jitter = 1 + (Math.random() * 2 - 1) * NKP_SIZE_JITTER;
+  const size = Math.max(layout.sizeMin, base * jitter);
+  const r = size / 2;
+  const x = r + Math.random() * Math.max(1, arenaW - 2 * r);
+  const y = r + Math.random() * Math.max(1, arenaH - 2 * r);
+  const angle = Math.random() * Math.PI * 2;
+  const speed = NKP_INITIAL_SPEED * (0.4 + Math.random() * 0.6);
+  const sign = (typeof classesNumeric !== 'undefined' && classesNumeric[p.class])
+               ? classesNumeric[p.class] : -1;
+  const spinDir = sign < 0 ? 1 : -1;
+  return {
+    id: _nkpBodyIdSeq++,
+    player: p,
+    size, r, x, y,
+    vx: Math.cos(angle) * speed,
+    vy: Math.sin(angle) * speed,
+    theta: Math.random() * 360,
+    omega: spinDir * (60 + Math.random() * NKP_INITIAL_OMEGA_MAX),
+  };
+}
+
+/* Cameo-mode replacement — build a body for `p` and reposition it
+   just off-arena on the OPPOSITE edge of where `exited` left,
+   pointing inward. Small perpendicular jitter avoids a stiff
+   conveyor-belt look. */
+function nkpSpawnFromEdge(p, exited, arenaW, arenaH, layout, base) {
+  const b = nkpMakeBody(p, arenaW, arenaH, layout, base);
+  const r = b.r;
+  // Which wall did `exited` go through? Ties broken toward the larger
+  // overshoot so diagonal exits pick the dominant axis.
+  const overLeft   = -(exited.x + exited.r);
+  const overRight  =  (exited.x - exited.r) - arenaW;
+  const overTop    = -(exited.y + exited.r);
+  const overBottom =  (exited.y - exited.r) - arenaH;
+  const worst = Math.max(overLeft, overRight, overTop, overBottom);
+  const jit = () => (Math.random() - 0.5) * NKP_CAMEO_ENTRY_SPEED * 0.5;
+  if (worst === overLeft) {
+    b.x = arenaW + r;
+    b.y = Math.max(r, Math.min(arenaH - r, exited.y));
+    b.vx = -NKP_CAMEO_ENTRY_SPEED; b.vy = jit();
+  } else if (worst === overRight) {
+    b.x = -r;
+    b.y = Math.max(r, Math.min(arenaH - r, exited.y));
+    b.vx =  NKP_CAMEO_ENTRY_SPEED; b.vy = jit();
+  } else if (worst === overTop) {
+    b.y = arenaH + r;
+    b.x = Math.max(r, Math.min(arenaW - r, exited.x));
+    b.vy = -NKP_CAMEO_ENTRY_SPEED; b.vx = jit();
+  } else {
+    b.y = -r;
+    b.x = Math.max(r, Math.min(arenaW - r, exited.x));
+    b.vy =  NKP_CAMEO_ENTRY_SPEED; b.vx = jit();
+  }
+  return b;
+}
+
+/* In-place Fisher–Yates shuffle. Used once at session start to
+   randomize the cameo waiting queue. */
+function nkpShuffleInPlace(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    const t = arr[i]; arr[i] = arr[j]; arr[j] = t;
+  }
+  return arr;
+}
+
+/* Build the initial body set. For normal sessions: one body per
+   player. For cameo sessions (>= NKP_CAMEO_THRESHOLD players):
+   physicalize the first NKP_CAMEO_ACTIVE from a shuffled roster
+   and return the remainder as the waiting queue. */
+function nkpBuildInitial(players, arenaW, arenaH, layout, cameo) {
+  const base = nkpBaseSize(cameo ? NKP_CAMEO_ACTIVE : players.length,
+                           arenaW, arenaH, layout);
+  if (!cameo) {
+    return { bodies: players.map(p => nkpMakeBody(p, arenaW, arenaH, layout, base)),
+             waiting: [], base };
+  }
+  const shuffled = nkpShuffleInPlace(players.slice());
+  const active   = shuffled.slice(0, NKP_CAMEO_ACTIVE);
+  const waiting  = shuffled.slice(NKP_CAMEO_ACTIVE);
+  return { bodies: active.map(p => nkpMakeBody(p, arenaW, arenaH, layout, base)),
+           waiting, base };
 }
 
 /* Body-body elastic collision along the line of centers, plus a
@@ -347,9 +425,14 @@ const NkpApp = () => {
     };
   }, []);
 
-  // Layout tiers depend on member count too now, so dense sessions
-  // (HSOD's 90+) get a smaller glyph floor and lower pack fraction.
-  const layout = nkpLayout(viewport.w, decoded.players.length);
+  // Cameo mode kicks in once the roster crosses the 168-classpect
+  // ceiling. In that mode the effective on-screen count is capped at
+  // NKP_CAMEO_ACTIVE, so layout sizes for THAT count .
+  const cameoMode = decoded.players.length >= NKP_CAMEO_THRESHOLD;
+  const effectiveCount = cameoMode
+    ? Math.min(NKP_CAMEO_ACTIVE, decoded.players.length)
+    : decoded.players.length;
+  const layout = nkpLayout(viewport.w, effectiveCount);
   const arenaX = layout.padSides;
   const arenaY = layout.padTop;
   const arenaW = Math.max(180, viewport.w - layout.padSides * 2);
@@ -359,9 +442,16 @@ const NkpApp = () => {
   // triggering React rerenders per frame. A separate `tick` state
   // increments each frame to drive rerender of the visual layer.
   const bodiesRef = React.useRef([]);
-  // Held-body state: which body the mouse currently owns, plus
-  // running velocity/omega samples so releasing hands the physics
-  // loop a plausible momentum from the last few frames of motion.
+  // Cameo-mode waiting queue — players not currently on-arena.
+  // Populated once at build time; mutated FIFO as bodies cycle in
+  // and out. `baseRef` caches the target glyph size so newcomers
+  // match the existing on-arena bodies rather than resampling.
+  const waitingRef = React.useRef([]);
+  const baseRef    = React.useRef(0);
+  // Held-body state: which body the mouse currently owns (by id,
+  // not array index — cameo mode shuffles the array constantly),
+  // plus running velocity/omega samples so releasing hands the
+  // physics loop plausible momentum from the last few frames.
   const heldRef = React.useRef(null);
   const arenaRef = React.useRef(null);
   // Mirror arena dims into a ref so the always-on mouse handlers can
@@ -372,14 +462,21 @@ const NkpApp = () => {
   const [, setTick] = React.useState(0);
   React.useEffect(() => {
     if (!decoded.players.length) return;
-    bodiesRef.current = nkpBuildBodies(decoded.players, arenaW, arenaH, layout);
+    const init = nkpBuildInitial(decoded.players, arenaW, arenaH, layout, cameoMode);
+    bodiesRef.current  = init.bodies;
+    waitingRef.current = init.waiting;
+    baseRef.current    = init.base;
     let raf = 0;
     let last = performance.now();
     const step = (now) => {
       const dt = Math.min(0.05, (now - last) / 1000);  // cap 50ms so alt-tab freezes don't teleport bodies
       last = now;
       const bs = bodiesRef.current;
-      for (const b of bs) {
+      // Collect cameo-mode exits so we can splice them out AFTER the
+      // integration loop (avoids mutating `bs` mid-iteration).
+      const exitedIdxs = [];
+      for (let i = 0; i < bs.length; i++) {
+        const b = bs[i];
         // Held bodies skip physics integration — their position is
         // driven by mousemove instead. Theta still ticks so users see
         // their wind-up-spin build while dragging.
@@ -390,18 +487,50 @@ const NkpApp = () => {
         b.x += b.vx * dt;
         b.y += b.vy * dt;
         b.theta = (b.theta + b.omega * dt) % 360;
-        // Wall bounces + tangential spin-kick. The tangential vel at
-        // the contact point is a mix of body's linear velocity along
-        // the wall and its rim velocity due to omega — for a beyblade
-        // spinning a wheel against a wall, that's what spins it up
-        // or down. Simplified to just the linear-tangent term here.
-        if (b.x - b.r < 0)          { b.x = b.r;          b.vx = Math.abs(b.vx);  b.omega += NKP_WALL_SPIN_KICK *  b.vy; }
-        if (b.x + b.r > arenaW)     { b.x = arenaW - b.r; b.vx = -Math.abs(b.vx); b.omega += NKP_WALL_SPIN_KICK * -b.vy; }
-        if (b.y - b.r < 0)          { b.y = b.r;          b.vy = Math.abs(b.vy);  b.omega += NKP_WALL_SPIN_KICK * -b.vx; }
-        if (b.y + b.r > arenaH)     { b.y = arenaH - b.r; b.vy = -Math.abs(b.vy); b.omega += NKP_WALL_SPIN_KICK *  b.vx; }
+        if (cameoMode) {
+          // Walls are permeable in cameo mode: bodies drift out and
+          // get swapped for a queued player entering the opposite
+          // edge. Consider "gone" once fully past the wall by r + a
+          // small buffer.
+          const gone = (b.x + b.r + NKP_CAMEO_EXIT_BUFFER < 0)
+                    || (b.x - b.r - NKP_CAMEO_EXIT_BUFFER > arenaW)
+                    || (b.y + b.r + NKP_CAMEO_EXIT_BUFFER < 0)
+                    || (b.y - b.r - NKP_CAMEO_EXIT_BUFFER > arenaH);
+          // Never cycle out a body the user is currently dragging —
+          // that would yank it out of their hand mid-fling.
+          if (gone && !b.held) exitedIdxs.push(i);
+        } else {
+          // Wall bounces + tangential spin-kick. The tangential vel
+          // at the contact point is a mix of the body's linear velocity
+          // along the wall and its rim velocity due to omega — for a
+          // beyblade spinning a wheel against a wall, that's what spins
+          // it up or down. Simplified to just the linear-tangent term.
+          if (b.x - b.r < 0)          { b.x = b.r;          b.vx = Math.abs(b.vx);  b.omega += NKP_WALL_SPIN_KICK *  b.vy; }
+          if (b.x + b.r > arenaW)     { b.x = arenaW - b.r; b.vx = -Math.abs(b.vx); b.omega += NKP_WALL_SPIN_KICK * -b.vy; }
+          if (b.y - b.r < 0)          { b.y = b.r;          b.vy = Math.abs(b.vy);  b.omega += NKP_WALL_SPIN_KICK * -b.vx; }
+          if (b.y + b.r > arenaH)     { b.y = arenaH - b.r; b.vy = -Math.abs(b.vy); b.omega += NKP_WALL_SPIN_KICK *  b.vx; }
+        }
       }
-      // Pairwise collisions. O(n²) — fine for typical session sizes
-      // (<= ~20 members). Could bucket if we ever need it.
+      // Cameo cycling — for each exit, push its player to the back
+      // of the waiting queue and spawn the next queued player on
+      // the opposite edge. Iterate exitedIdxs in DESCENDING order so
+      // splice() indices stay valid.
+      if (cameoMode && exitedIdxs.length) {
+        for (let k = exitedIdxs.length - 1; k >= 0; k--) {
+          const idx = exitedIdxs[k];
+          const exited = bs[idx];
+          bs.splice(idx, 1);
+          waitingRef.current.push(exited.player);
+          const nextPlayer = waitingRef.current.shift();
+          if (nextPlayer) {
+            const nb = nkpSpawnFromEdge(nextPlayer, exited,
+                                        arenaW, arenaH, layout, baseRef.current);
+            bs.push(nb);
+          }
+        }
+      }
+      // Pairwise collisions. O(n²) — bounded by 100 in cameo mode,
+      // 20-ish typical otherwise.
       for (let i = 0; i < bs.length; i++) {
         for (let j = i + 1; j < bs.length; j++) nkpResolvePair(bs[i], bs[j]);
       }
@@ -414,7 +543,7 @@ const NkpApp = () => {
     // meaningfully change — resize should keep momentum, so we key
     // on player count + arena size.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [decoded.players.length, arenaW, arenaH]);
+  }, [decoded.players.length, arenaW, arenaH, cameoMode]);
 
   // Mouse handling — grab-and-fling. Attaches ONCE per mount; reads
   // arena rect via arenaRef every event (always fresh) and clamps to
@@ -435,22 +564,29 @@ const NkpApp = () => {
       for (let i = bs.length - 1; i >= 0; i--) {
         const b = bs[i];
         const dx = mx - b.x, dy = my - b.y;
-        if (dx * dx + dy * dy < b.r * b.r) return i;
+        if (dx * dx + dy * dy < b.r * b.r) return b;
       }
-      return -1;
+      return null;
+    };
+    // Body-by-id lookup. Cameo mode splices bodies in and out of the
+    // array every second or two, so a stale integer index is
+    // dangerous — the id is stable across cycles.
+    const bodyById = (id) => {
+      const bs = bodiesRef.current;
+      for (let i = 0; i < bs.length; i++) if (bs[i].id === id) return bs[i];
+      return null;
     };
     const onDown = (e) => {
       const p = eventPoint(e);
       if (!p) return;
-      const idx = findBodyAt(p.x, p.y);
-      if (idx < 0) return;
-      const b = bodiesRef.current[idx];
+      const b = findBodyAt(p.x, p.y);
+      if (!b) return;
       b.held = true;
       // Kill existing motion so the grab feels crisp — release will
       // hand back fresh momentum computed from the drag itself.
       b.vx = 0; b.vy = 0; b.omega = 0;
       heldRef.current = {
-        bodyIdx: idx,
+        bodyId: b.id,
         offsetX: p.x - b.x,
         offsetY: p.y - b.y,
         lastX: p.x, lastY: p.y,
@@ -465,7 +601,8 @@ const NkpApp = () => {
       if (!h) return;
       const p = eventPoint(e);
       if (!p) return;
-      const b = bodiesRef.current[h.bodyIdx];
+      const b = bodyById(h.bodyId);
+      if (!b) { heldRef.current = null; return; }
       const now = performance.now();
       const dt = Math.max(0.001, (now - h.lastTime) / 1000);
       // Raw cursor velocity (px/s).
@@ -502,11 +639,12 @@ const NkpApp = () => {
     const onUp = () => {
       const h = heldRef.current;
       if (!h) return;
-      const b = bodiesRef.current[h.bodyIdx];
+      const b = bodyById(h.bodyId);
+      heldRef.current = null;
+      if (!b) return;
       b.held = false;
       // Hand off the smoothed samples to the physics loop.
       b.vx = h.smVX; b.vy = h.smVY; b.omega = h.smOmega;
-      heldRef.current = null;
     };
     const arena = arenaRef.current;
     if (arena) {
@@ -570,7 +708,7 @@ const NkpApp = () => {
                touchAction: 'none',
              }}>
           {bodiesRef.current.map(b => (
-            <div key={b.idx} style={{
+            <div key={b.id} style={{
               position: 'absolute',
               left: (b.x - b.r) + 'px',
               top:  (b.y - b.r) + 'px',
