@@ -1363,7 +1363,7 @@ const SPECIAL_SESSIONS = {
       { characterKey: "featherlessImp", name: "featherlessImp", classpect: ["Page", "Heart"], moon: "Prospit", color: "#0033FF", symbol: "https://file.garden/ao90KhSOlmFOq0Ho/HSOD_icons/icon_featherlessImp.png" },
       { characterKey: "gimmeChips", name: "gimmeChips", classpect: ["Mage", "Breath"], moon: "Derse", color: "#82b4f5", symbol: "https://file.garden/ao90KhSOlmFOq0Ho/HSOD_icons/icon_gimmeChips.jpg" },
       { characterKey: "Tolerantcell", name: "Tolerantcell", classpect: ["Witch", "Doom"], moon: "Derse", color: "#27B074" },
-      { characterKey: "squashedBugg", name: "squashedBugg", classpect: ["Sylph", "Blood"], moon: "Dual", color: "#028717", symbol: "https://file.garden/ao90KhSOlmFOq0Ho/HSOD_icons/icon_squashedBugg.png" },
+      { characterKey: "whichWitch", name: "whichWitch", classpect: ["Sylph", "Blood"], moon: "Dual", color: "#028717", symbol: "https://file.garden/ao90KhSOlmFOq0Ho/HSOD_icons/icon_whichWitch.png" },
       { characterKey: "tyrannicalAscent", name: "tyrannicalAscent", classpect: ["Page", "Mind"], moon: "Dual", color: "#008080", symbol: "https://file.garden/ao90KhSOlmFOq0Ho/HSOD_icons/icon_tyrannicalAscent.png" },
       { characterKey: "severedObjection", name: "severedObjection", classpect: ["Mage", "Heart"], moon: "Prospit", color: "#D6046D" },
       { characterKey: "mechaDokk", name: "mechaDokk", classpect: ["Page", "Light"], moon: "Derse", color: "#416600", symbol: "https://file.garden/ao90KhSOlmFOq0Ho/HSOD_icons/icon_mechaDokk.png" },
