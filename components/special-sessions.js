@@ -1222,7 +1222,7 @@ const SPECIAL_SESSIONS = {
       'A3-67-CH-1K-FQ-22-94-R1-B8-JK-3G-XW',
       'A367CH1KFQ2294R1B8JK3GXW',
     ],
-    code:        "1121501511721B22212212212222222222222412522602602612622712712722722902912912922922922922922922A22A22A22B12B22B22C12C13123223223323413423423503513623623713713723723723723723923923A13A13A23A23B03B24124414424424714724814814824914924924B24B24B25105105115115115115125125215225225315315315325325405425425425515615615625625725725815815825915915915925925925925A25B15C15C15C15C15C15C15C25C25C25C26126126126216226226226226316316326416426426426516526526526526626716716716726726826826826826916926926926B06B16B16B26B26B26B26C16C16C16C16C26C26C27227227317417607617627627627717717807817817817827907917917917927A17A17C17C28118118128218218218218228418418418428528618728818818918918918918A28B08C18C18C18C29119129129319319319319429519519529629719729729729729819919919929929A19A19A29B19B29C19C19C29C2A21A22A22A22A31A31A32A40A41A42A42A81A91A91A91A91A92AC1AC1AC1AC2B11B11B11B12B12B21B21B21B21B21B22B32B41B42B42B51B61B62B72B80B91B92B92B92B92BA2BC0BC1BC1BC1BC2BC2BC2C22C22C22C32C40C41C42C51C52C62C72C81C90C92C92C92C92CA2CB1CB1CB1CB1CB2CB2CB2CC1CC1D11D11D11D12D12D12D22D22D22D31D31D32D51D52D52D62D70D71D71D72D72D91D91D92D92D92D92DA0DB0DB1DB2DB2DC0DC1DC1DC1DC2DC2E71E71E91EA1EC0EC2",
+    code:        "1121301501511721B22112212212212222222222222412522602602612622712712722722902912912922922922922922922A22A22A22B12B22B22C12C13123223223323413423423503513623623713713723723723723723923923A13A13A23A23A23B03B24124414424424714724814814824914924924B24B24B25105105115115115115125125215225225225315315315325325405425425425515615615625625725725815815825915915915925925925925A25B15C15C15C15C15C15C15C25C25C25C26126126126216226226226226316316326416426426426516526526526526626716716716726726726826826826826916926926926B06B16B16B26B26B26B26C16C16C16C16C26C26C27227227317417517607617627627627717717807817817817827907917917917927A17A17C17C28118118128218218218218228418418418428528728818818918918918918A28B08C18C18C18C29119129129319319319319429519519529629719729729729729819919919929929A19A19A29B19B29C19C19C29C29C2A21A22A22A22A31A31A32A40A41A42A42A72A81A91A91A91A91A92AC1AC1AC1AC2B11B11B11B12B12B21B21B21B21B21B22B32B41B42B42B51B61B62B72B80B91B92B92B92B92BA2BC0BC1BC1BC1BC2BC2BC2C22C22C22C32C40C41C42C51C52C62C72C81C90C92C92C92C92CA2CB1CB1CB1CB1CB2CB2CB2CC1CC1D11D11D11D12D12D12D22D22D22D31D31D32D42D51D52D52D62D70D71D71D72D72D91D91D92D92D92D92DA0DB0DB1DB2DB2DC0DC1DC1DC1DC2DC2E71E71E91EA1EC0EC2",
     description: 'The Homestuck Official Discord. A real session, somehow.',
     flavor:      null,
 
@@ -1344,7 +1344,7 @@ const SPECIAL_SESSIONS = {
       { characterKey: "bicpenco", name: "bicpenco", classpect: ["Maid", "Heart"], moon: "Prospit", color: "#C9D9F1", symbol: "https://file.garden/ao90KhSOlmFOq0Ho/HSOD_icons/icon_bicpenco.jpg" },
       { characterKey: "GallieGalio", name: "GallieGalio", classpect: ["Witch", "Rage"], moon: "Dual", color: "#CC214A" },
       { characterKey: "Dove_Striker", name: "Dove_Striker", classpect: ["Rogue", "Doom"], moon: "Derse", color: "#A10000" },
-      { characterKey: "hungriestGenius", name: "hungriestGenius", classpect: ["Maid", "Rage"], moon: "Prospit", color: "#e34234", symbol: "https://file.garden/ao90KhSOlmFOq0Ho/HSOD_icons/icon_hungriestGenius.jpg" },
+      { characterKey: "hungriestGenius", name: "hungriestGenius", classpect: ["Sylph", "Breath"], moon: "Prospit", color: "#e34234", symbol: "https://file.garden/ao90KhSOlmFOq0Ho/HSOD_icons/icon_hungriestGenius.jpg" },
       { characterKey: "freakedDiscord", name: "freakedDiscord", classpect: ["Rogue", "Space"], moon: "Prospit", color: "#004d9b", symbol: "https://file.garden/ao90KhSOlmFOq0Ho/HSOD_icons/icon_freakedDiscord.png" },
       { characterKey: "gracedCarminic", name: "gracedCarminic", classpect: ["Knight", "Rage"], moon: "Prospit", color: "#ff4500", symbol: "https://file.garden/ao90KhSOlmFOq0Ho/HSOD_icons/icon_gracedCarminic.png" },
       { characterKey: "BI-25", name: "BI-25", classpect: ["Page", "Blood"], moon: "Prospit", color: "#1E65F4", symbol: "https://file.garden/ao90KhSOlmFOq0Ho/HSOD_icons/icon_BI-25.jpg" },
@@ -1615,6 +1615,14 @@ const SPECIAL_SESSIONS = {
       { characterKey: "theseusGalore", name: "theseusGalore", classpect: ["Bard", "Heart"], moon: "Derse", color: "#005682" },
       { characterKey: "fatalDamage", name: "fatalDamage", classpect: ["Heir", "Doom"], moon: "Dual", color: "#A1A100" },
       { characterKey: "granularGenesis", name: "granularGenesis", classpect: ["Witch", "Space"], moon: "Prospit", color: "#4ac925", symbol: "https://file.garden/ao90KhSOlmFOq0Ho/HSOD_icons/icon_granularGenesis.webp" },
+      { characterKey: "pompousPathogen", name: "pompousPathogen", classpect: ["Lord", "Life"], moon: "Dual", color: "#11f58b", symbol: "https://file.garden/ao90KhSOlmFOq0Ho/HSOD_icons/icon_pompousPathogen.webp" },
+      { characterKey: "iridescentInkspill", name: "iridescentInkspill", classpect: ["Mage", "Time"], moon: "Derse", color: "#B536DA" },
+      { characterKey: "Nova Vi", name: "Nova Vi", classpect: ["Seer", "Space"], moon: "Derse", color: "#5d00ff", symbol: "https://file.garden/ao90KhSOlmFOq0Ho/HSOD_icons/icon_novavi.png" },
+      { characterKey: "mintShampoo", name: "mintShampoo", classpect: ["Knight", "Light"], moon: "Derse", color: "#B0FFDB" },
+      { characterKey: "gallicansAntagonist", name: "gallicansAntagonist", classpect: ["Page", "Time"], moon: "Derse", color: "#71113b" },
+      { characterKey: "SpudTheStupid", name: "SpudTheStupid", classpect: ["Prince", "Doom"], moon: "Derse", color: "#C19A6B" },
+      { characterKey: "anthrosTestimony", name: "anthrosTestimony", classpect: ["Heir", "Mind"], moon: "Derse", color: "#86d65d" },
+      { characterKey: "vibri", name: "vibri", classpect: ["Witch", "Hope"], moon: "Prospit", color: "#1D5F7A", symbol: "https://file.garden/ao90KhSOlmFOq0Ho/HSOD_icons/icon_vibri.jpg" },
     ],
 
     assets: { bannerArt: null, gridBackground: null, layerOrbOverride: null, needs: [] },
@@ -1648,7 +1656,7 @@ const SPECIAL_SESSIONS = {
       gameQuality: {
         speaker: 'cesiumCalamity',
         orb:     'Busted',
-        quip:    "Okay, it's not like a session of *checks notes* 385 members. Would not. Be stupid broken. But it's vibrant nonetheless.",
+        quip:    "Okay, it's not like a session of *checks notes* 393 members. Would not. Be stupid broken. But it's vibrant nonetheless.",
       },
       oddest: {
         lines: [
