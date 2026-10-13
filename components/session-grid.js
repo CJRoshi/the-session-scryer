@@ -253,11 +253,15 @@ const SessionGrid = React.forwardRef(({ session, moonCursor, onToggle, onClear =
         {Object.entries(classesNumeric).map(([cls, val]) => (
           xLabelStyle === 'icon' ? (
             <image key={cls}
-                   href={`./images/classes/outline/${cls.toLowerCase()}.svg`}
+                   href={`./images/classes/no-bg/${cls.toLowerCase()}.svg`}
                    x={toSvgX(val) - 12}
                    y={chromeBottomY + 12}
                    width="24"
-                   height="24"/>
+                   height="24"
+                   style={{
+                     // Single soft radial drop-shadow.
+                     filter: 'drop-shadow(0 0 0.75px rgba(255,255,255,0.95))'
+                   }}/>
           ) : (
             <text key={cls} x={toSvgX(val)} y={chromeBottomY + 25}
                   textAnchor="middle" fontSize="11" fontFamily="Courier New" fontWeight="bold" fill="#f8f8f8">

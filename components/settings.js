@@ -11,6 +11,14 @@
 
 const SCRYER_SETTING_NS = 'scryer.setting.';
 
+/* GradientR ring-color is gated behind 100% secrets completion on
+   the Connector. The Connector's header.js writes the flag whenever
+   all secrets are found. */
+const CC_GRADIENTR_UNLOCKED = (() => {
+  try { return localStorage.getItem('cc_gradientR_unlocked') === '1'; }
+  catch { return false; }
+})();
+
 const SCRYER_SETTINGS_REGISTRY = {
   /* Sitewide polarity — sign convention for classes + aspects.
      Display-only: flips the sign of every value shown to the user
@@ -51,11 +59,14 @@ const SCRYER_SETTINGS_REGISTRY = {
   glyphRingMode: {
     kind:        'enum',
     default:     'canonical',
-    values:      ['canonical', 'background', 'gradient', 'grayscale'],
+    values:      CC_GRADIENTR_UNLOCKED
+                   ? ['canonical', 'background', 'gradient', 'gradientR', 'grayscale']
+                   : ['canonical', 'background', 'gradient', 'grayscale'],
     valueLabels: {
       canonical:  'Canonical',
       background: 'Background',
       gradient:   'Gradient',
+      ...(CC_GRADIENTR_UNLOCKED ? { gradientR: 'GradientR' } : {}),
       grayscale:  'Grayscale',
     },
     label:       'Ring color',

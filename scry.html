@@ -2250,13 +2250,15 @@ const ResultsView = ({ session, sessionCode = '', gridOverlays, lunarFocus = 'al
       const img = new Image();
       img.onload = () => {
         const canvas = document.createElement('canvas');
-        canvas.width = 550;
-        canvas.height = 462;
+        // Fixed export width; scale SVG to fit so output size never
+        // depends on the device's rendered SVG size.
+        canvas.width = 1024;
+        canvas.height = Math.round(1024 * 462 / 550);
         const ctx = canvas.getContext('2d');
         // Scrying-scene grid is dark — fill to match.
         ctx.fillStyle = '#0d0d0d';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.drawImage(img, 0, 0);
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
         URL.revokeObjectURL(url);
         canvas.toBlob(resolve, 'image/png');
       };

@@ -8,6 +8,14 @@ Inspired by *Homestuck* by Andrew Hussie.
 
 ## Most Recent Update
 
+Fresh Blood (10/13/2026)
+
+- Recentered the Blood emblem inside its glyph disc (gash now sits at the disc center)
+- HSOD 2026 session: small updates
+- New options now unlock here with Connector secret completion!
+- Fixed exported session-scene and glyph PNGs to always render at a fixed 1024px wide, independent of device display size
+- Fixed jagged class icons on the session grid
+
 Rogue's Gallery (8/24/2026)
 
 - Added the Glyph Gallery to the Scryer -- View a session's members in Glyphic form!
@@ -22,8 +30,7 @@ Prediction Schmonviction (6/27/2026)
 
 ### Hotfixes
 
-- Hotfix 1 (Planned) -- Day Zero Bugs
-- Hotfix 2 (Planned) -- Updating Secrets...
+- Hotfix 1 (Planned) -- Day Zero, Merch
 
 ### Past Updates
 
