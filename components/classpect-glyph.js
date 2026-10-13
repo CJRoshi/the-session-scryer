@@ -103,9 +103,12 @@ function resolveRingColor(mode, className, aspectName) {
     return { kind: 'solid', color: interpHex(GS_LORD_DARK, GS_MUSE_LIGHT, t) };
   }
   if (mode === 'gradient' || mode === 'gradientR') {
+    // If FG is dark enough that darkening would blow out to pure black
+    // (Doom's FG is literal black, Void's is near-black navy), fall
+    // back to the aspect's BACKGROUND color.
     let bright = FG_COLORS[asp];
     const [r, g, b] = hexToRgb(bright);
-    if (r + g + b < 90) bright = RING_COLORS[asp];
+    if (r + g + b < 150) bright = BG_COLORS[asp];
     const dark = darkenHex(bright, GRADIENT_DARKEN);
     // Gradient:  dark at inner hole,  bright at outer edge.
     // GradientR: bright at inner hole, dark at outer edge (reversed).
