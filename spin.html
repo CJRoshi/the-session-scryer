@@ -259,7 +259,39 @@ function nkpDecodeSessionFromHash() {
     ? specialSessionByAlias(raw) : null;
   const code = alias ? alias.code : raw;
   const result = (typeof decodeSession === 'function') ? decodeSession(code) : { players: [] };
-  return { code: raw, players: result.players || [] };
+  let players = result.players || [];
+  // If this hash matches a special session (HSOD, Betakids, cherubs, …),
+  // enrich each player with the matching member's color so the Text
+  // outline mode can use it.
+  const special = alias || (typeof specialSessionByCode === 'function' ? specialSessionByCode(code) : null);
+  if (special && Array.isArray(special.members)) {
+    const claimed = new Array(special.members.length).fill(false);
+    players = players.map((p) => {
+      let hitI = -1;
+      for (let i = 0; i < special.members.length; i++) {
+        if (claimed[i]) continue;
+        const m = special.members[i];
+        const cls = m.classpect && m.classpect[0];
+        const asp = m.classpect && m.classpect[1];
+        if (cls === p.class && asp === p.aspect && m.moon === p.moon) { hitI = i; break; }
+      }
+      if (hitI === -1) {
+        for (let i = 0; i < special.members.length; i++) {
+          if (claimed[i]) continue;
+          const m = special.members[i];
+          const cls = m.classpect && m.classpect[0];
+          const asp = m.classpect && m.classpect[1];
+          if (cls === p.class && asp === p.aspect) { hitI = i; break; }
+        }
+      }
+      if (hitI !== -1) {
+        claimed[hitI] = true;
+        return { ...p, color: special.members[hitI].color || null };
+      }
+      return p;
+    });
+  }
+  return { code: raw, players };
 }
 
 /* Monotonically-increasing body ID — used as the React key and as
@@ -723,7 +755,7 @@ const NkpApp = () => {
                 animate={false}
                 spinAngle={b.theta}
                 frameless
-                canonCharacters={[{ lunarsway: b.player.moon }]}
+                canonCharacters={[{ lunarsway: b.player.moon, color: b.player.color || null }]}
               />
             </div>
           ))}

@@ -280,6 +280,7 @@
     {
       name: 'Caliborn',
       className: 'Lord',   aspectName: 'Time',   lunarsway: 'Derse',
+      color: '#a10000',
       classpectVal: -6,    rung: 21,
       leadValue:    -7,    leadRank: '#1',
       // Explicit Leader + Derse Center + Oddest-One-Out + Closest-Knit
@@ -293,6 +294,7 @@
     {
       name: 'Calliope',
       className: 'Muse',   aspectName: 'Space',  lunarsway: 'Prospit',
+      color: '#929292',
       classpectVal: 13,    rung: 26,
       leadValue:    7,     leadRank: '#2',
       // Implicit Leader + Prospit Center
@@ -385,7 +387,7 @@
               size={previewGlyphPx}
               showButtons={false}
               animate={false}
-              canonCharacters={[{ lunarsway: c.lunarsway }]}
+              canonCharacters={[{ lunarsway: c.lunarsway, color: c.color }]}
               substance={buildSub(c)}
             />
             <div style={{
@@ -406,7 +408,7 @@
     const graphSettings     = ['graphXAxisLabels', 'graphYAxisLabels'];
     // Style = ring color, outline, text font (font moved here from
     // Substance since it affects visual style, not information content).
-    const styleSettings     = ['glyphRingMode', 'glyphOutlineMode', 'substanceFont'];
+    const styleSettings     = ['glyphRingMode', 'glyphOutlineMode', 'glyphOutlineThickness', 'substanceFont'];
     // Substance = the information-bearing text + icon overlays.
     const substanceSettings = ['substanceTop', 'substanceLeft', 'substanceRight', 'substanceBottom'];
 

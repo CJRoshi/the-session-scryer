@@ -11,9 +11,9 @@
 
 const SCRYER_SETTING_NS = 'scryer.setting.';
 
-/* GradientR ring-color is gated behind 100% secrets completion on
-   the Connector. The Connector's header.js writes the flag whenever
-   all secrets are found. */
+/* GradientR ring-color and Text outline options are gated behind 100% 
+   secrets completion on the Connector. The Connector's header.js writes 
+   the flag whenever all secrets are found. */
 const CC_GRADIENTR_UNLOCKED = (() => {
   try { return localStorage.getItem('cc_gradientR_unlocked') === '1'; }
   catch { return false; }
@@ -75,10 +75,24 @@ const SCRYER_SETTINGS_REGISTRY = {
   glyphOutlineMode: {
     kind:        'enum',
     default:     'automatic',
-    values:      ['automatic', 'none'],
-    valueLabels: { automatic: 'Auto', none: 'Off' },
+    values:      CC_GRADIENTR_UNLOCKED
+                   ? ['automatic', 'text', 'none']
+                   : ['automatic', 'none'],
+    valueLabels: {
+      automatic: 'Auto',
+      none:      'Off',
+      ...(CC_GRADIENTR_UNLOCKED ? { text: 'Text' } : {}),
+    },
     label:       'Outline',
     description: "Lunar-sway stroke on the ring & disc edges.",
+  },
+  glyphOutlineThickness: {
+    kind:        'enum',
+    default:     '1',
+    values:      ['1', '2', '3'],
+    valueLabels: { '1': '1px', '2': '2px', '3': '3px' },
+    label:       'Outline thickness',
+    description: "Stroke width used by the Outline above.",
   },
   substanceFont: {
     kind:        'enum',

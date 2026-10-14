@@ -1537,6 +1537,15 @@
         drop-shadow(0 0 2px rgba(0, 0, 0, 0.85))
         drop-shadow(0 1px 2px rgba(120, 100, 70, 0.4));
     }
+    /* The class icon is now an inline <span> that hosts a direct SVG
+       (see InlineClassIcon). The baked-in sticker outline comes from
+       the SVG itself; the amber ground-shadow still applies via the
+       shared .phc-inline-icon rule. The inner SVG fills the span. */
+    .player-hover-card .phc-class-icon > svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
     .player-hover-card .phc-moon-icon {
       image-rendering: pixelated;
     }
@@ -1924,6 +1933,50 @@ const { ScryingBall, ScryingInterior, ScryerHeader, ScryerFooter } = window;
 
 /* FitText — scales font-size so the child text fits on ONE line
    inside its parent's content width. */
+/* Inline class-icon renderer */
+const _inlineClassIconCache = {};
+const _inlineClassIconPending = {};
+const InlineClassIcon = ({ className, cssClass, alt, style }) => {
+  const cls = (className || '').toLowerCase();
+  const [svg, setSvg] = React.useState(() => _inlineClassIconCache[cls] || null);
+  React.useEffect(() => {
+    if (_inlineClassIconCache[cls]) {
+      setSvg(_inlineClassIconCache[cls]);
+      return;
+    }
+    const promise = _inlineClassIconPending[cls] || (
+      _inlineClassIconPending[cls] = fetch(`./images/classes/outline/${cls}.svg`)
+        .then((r) => r.text())
+        .then((t) => {
+          // Make the SVG fill the host span so the baked
+          // non-scaling-stroke renders at this element's CSS px.
+          const sized = t.replace(
+            /<svg\b([^>]*)>/,
+            '<svg$1 width="100%" height="100%" preserveAspectRatio="xMidYMid meet" style="display:block;">'
+          );
+          _inlineClassIconCache[cls] = sized;
+          return sized;
+        })
+        .catch(() => '')
+    );
+    let cancelled = false;
+    promise.then((s) => { if (!cancelled) setSvg(s); });
+    return () => { cancelled = true; };
+  }, [cls]);
+  if (!svg) {
+    return <span className={cssClass} aria-label={alt} style={style}/>;
+  }
+  return (
+    <span
+      className={cssClass}
+      aria-label={alt}
+      role="img"
+      style={style}
+      dangerouslySetInnerHTML={{ __html: svg }}
+    />
+  );
+};
+
 const FitText = ({ children, maxFontSize = 22, minFontSize = 10, className = '', style = {} }) => {
   const ref = useRef(null);
   const [fontSize, setFontSize] = useState(maxFontSize);
@@ -3418,9 +3471,11 @@ const ResultsView = ({ session, sessionCode = '', gridOverlays, lunarFocus = 'al
                                    target="cc" size="large"/>
                   </FitText>
                 </span>
-                <img className="phc-inline-icon phc-class-icon"
-                     src={`./images/classes/outline/${p.class.toLowerCase()}.svg`}
-                     alt={p.class}/>
+                {/* Inline the sticker-outline SVG. */}
+                <InlineClassIcon
+                  className={p.class}
+                  cssClass="phc-inline-icon phc-class-icon"
+                  alt={p.class}/>
                 <img className={`phc-inline-icon phc-aspect-icon${aspectNeedsOutline ? ' needs-outline' : ''}`}
                      src={`./images/aspects/no-bg/${p.aspect.toLowerCase()}.svg`}
                      alt={p.aspect}/>
@@ -4136,6 +4191,15 @@ const GlyphGallery = ({ session, lead, odd, knit, cen, luna, specialContext, cha
   //   - Each entry keeps `idx` (first-occurrence session index) so
   //     click-to-popup and substance building still route to a real
   //     session member.
+  // Text-outline color source: look up the slot's special-session
+  // member (if any) and return its color.
+  const slotColor = React.useCallback((idx) => {
+    const m = slotMemberByIdx?.[idx];
+    if (!m) return null;
+    const cd = charLookup?.[m.characterKey];
+    return (cd && cd.color) || m.color || null;
+  }, [slotMemberByIdx, charLookup]);
+
   const galleryEntries = React.useMemo(() => {
     const result = [];
     const anonKeyToIdx = new Map();
@@ -4294,7 +4358,7 @@ const GlyphGallery = ({ session, lead, odd, knit, cen, luna, specialContext, cha
               size={galleryGlyphPx}
               showButtons={false}
               animate={false}
-              canonCharacters={[{ lunarsway: entry.p.moon }]}
+              canonCharacters={[{ lunarsway: entry.p.moon, color: slotColor(entry.idx) }]}
             />
             <div className="font-courier" style={{
               fontSize: galleryLabelPx, color: '#e6e6e6',
@@ -4375,13 +4439,11 @@ const GlyphGallery = ({ session, lead, odd, knit, cen, luna, specialContext, cha
             <ClasspectGlyph
               className={session[popupIdx].class}
               aspectName={session[popupIdx].aspect}
-              /* Down-scaled on mobile — 480 blew past the modal's
-                 92vw ceiling on ~400px viewports, clipping the glyph
-                 and pushing the label off-canvas. */
+              /* Down-scaled on mobile. */
               size={isMobileGallery ? 300 : 480}
               showButtons={true}
               animate={true}
-              canonCharacters={[{ lunarsway: session[popupIdx].moon }]}
+              canonCharacters={[{ lunarsway: session[popupIdx].moon, color: slotColor(popupIdx) }]}
               substance={buildSubstance(popupIdx)}
             />
             <div className="font-courier" style={{fontSize: '0.9rem', color: '#e6e6e6', letterSpacing: '1px'}}>
@@ -4421,7 +4483,7 @@ const GlyphGallery = ({ session, lead, odd, knit, cen, luna, specialContext, cha
               size={isMobileGallery ? 260 : 360}
               showButtons={false}
               animate={false}
-              canonCharacters={[{ lunarsway: session[downloadPickIdx].moon }]}
+              canonCharacters={[{ lunarsway: session[downloadPickIdx].moon, color: slotColor(downloadPickIdx) }]}
               substance={buildSubstance(downloadPickIdx)}
             />
             <div className="font-courier" style={{fontSize: '0.75rem', color: '#888', letterSpacing: '1px'}}>
@@ -4470,7 +4532,7 @@ const GlyphGallery = ({ session, lead, odd, knit, cen, luna, specialContext, cha
               size={512}
               showButtons={false}
               animate={false}
-              canonCharacters={[{ lunarsway: entry.p.moon }]}
+              canonCharacters={[{ lunarsway: entry.p.moon, color: slotColor(entry.idx) }]}
               substance={buildSubstance(entry.idx)}
             />
           ))}

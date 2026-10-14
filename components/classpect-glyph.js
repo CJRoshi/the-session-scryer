@@ -139,6 +139,19 @@ function resolveOutlineColor(mode, canonChars, nonCanonChars) {
     const key = pickKey(canonChars) || pickKey(nonCanonChars);
     return key ? OUTLINE_COLORS[key] : null;
   }
+  if (mode === 'text') {
+    // First member with a color wins. If this session has no colored
+    // members, there's no text color to borrow — fall back to no
+    // outline (matches the Connector's behavior on character-less pages).
+    const pickColor = (list) => {
+      if (!list) return null;
+      for (const ch of list) {
+        if (ch && typeof ch.color === 'string' && ch.color) return ch.color;
+      }
+      return null;
+    };
+    return pickColor(canonChars) || pickColor(nonCanonChars) || null;
+  }
   return OUTLINE_COLORS[mode] || null;
 }
 
@@ -166,8 +179,8 @@ async function fetchRingSvgText(className) {
   return text;
 }
 
-async function loadRingStrokeOverlay(className, outlineColor) {
-  const key = `${className}|${outlineColor}`;
+async function loadRingStrokeOverlay(className, outlineColor, strokeW = 1) {
+  const key = `${className}|${outlineColor}|${strokeW}`;
   if (ringStrokeCache[key]) return ringStrokeCache[key];
 
   const text = await fetchRingSvgText(className);
@@ -225,7 +238,7 @@ async function loadRingStrokeOverlay(className, outlineColor) {
     }
     s.setAttribute('fill', 'none');
     s.setAttribute('stroke', outlineColor);
-    s.setAttribute('stroke-width', '1');
+    s.setAttribute('stroke-width', String(strokeW));
     s.setAttribute('vector-effect', 'non-scaling-stroke');
     s.setAttribute('stroke-linejoin', 'round');
     s.setAttribute('stroke-linecap',  'round');
@@ -234,8 +247,13 @@ async function loadRingStrokeOverlay(className, outlineColor) {
   svgEl.removeChild(scratchPath);
   document.body.removeChild(holder);
 
-  const serialized = new XMLSerializer().serializeToString(svgEl);
-  const dataUrl = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(serialized);
+  // Two serializations: imgSvg, inlineSvg
+  const imgSvg = new XMLSerializer().serializeToString(svgEl);
+  svgEl.setAttribute('width',  '100%');
+  svgEl.setAttribute('height', '100%');
+  svgEl.setAttribute('style',  'display:block;');
+  const inlineSvg = new XMLSerializer().serializeToString(svgEl);
+  const dataUrl = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(imgSvg);
   const img = new Image();
   await new Promise((resolve) => {
     img.onload  = resolve;
@@ -243,7 +261,7 @@ async function loadRingStrokeOverlay(className, outlineColor) {
     img.src = dataUrl;
   });
 
-  const result = { dataUrl, img };
+  const result = { dataUrl, img, svg: inlineSvg };
   ringStrokeCache[key] = result;
   return result;
 }
@@ -478,16 +496,19 @@ const ClasspectGlyph = React.forwardRef(({
   // 'scryer-setting-change' broadcast event, not the Connector's.
   const [ringModeSetting,    setRingModeSetting]    = React.useState(() => ScryerSettings.get('glyphRingMode'));
   const [outlineModeSetting, setOutlineModeSetting] = React.useState(() => ScryerSettings.get('glyphOutlineMode'));
+  const [outlineThkSetting,  setOutlineThkSetting]  = React.useState(() => ScryerSettings.get('glyphOutlineThickness'));
   React.useEffect(() => {
     const onChange = (ev) => {
-      if (ev.detail?.name === 'glyphRingMode')    setRingModeSetting(ScryerSettings.get('glyphRingMode'));
-      if (ev.detail?.name === 'glyphOutlineMode') setOutlineModeSetting(ScryerSettings.get('glyphOutlineMode'));
+      if (ev.detail?.name === 'glyphRingMode')         setRingModeSetting(ScryerSettings.get('glyphRingMode'));
+      if (ev.detail?.name === 'glyphOutlineMode')      setOutlineModeSetting(ScryerSettings.get('glyphOutlineMode'));
+      if (ev.detail?.name === 'glyphOutlineThickness') setOutlineThkSetting(ScryerSettings.get('glyphOutlineThickness'));
     };
     window.addEventListener('scryer-setting-change', onChange);
     return () => window.removeEventListener('scryer-setting-change', onChange);
   }, []);
   const ringMode    = ringModeProp    ?? ringModeSetting    ?? 'canonical';
   const outlineMode = outlineModeProp ?? outlineModeSetting ?? 'none';
+  const outlineThickness = Math.max(1, parseInt(outlineThkSetting, 10) || 1);
 
   const ringPaint         = resolveRingColor(ringMode, className, aspectName);
   const glyphOutlineColor = resolveOutlineColor(outlineMode, canonCharacters, nonCanonCharacters);
@@ -561,9 +582,9 @@ const ClasspectGlyph = React.forwardRef(({
   React.useEffect(() => {
     if (!glyphOutlineColor) { setRingStroke(null); return; }
     let cancelled = false;
-    loadRingStrokeOverlay(cls, glyphOutlineColor).then((s) => { if (!cancelled) setRingStroke(s); });
+    loadRingStrokeOverlay(cls, glyphOutlineColor, outlineThickness).then((s) => { if (!cancelled) setRingStroke(s); });
     return () => { cancelled = true; };
-  }, [cls, glyphOutlineColor]);
+  }, [cls, glyphOutlineColor, outlineThickness]);
 
   const strokeOverlayWrapperStyle = {
     position: 'absolute', inset: 0,
@@ -618,7 +639,7 @@ const ClasspectGlyph = React.forwardRef(({
     ctx.fill();
     if (glyphOutlineColor) {
       ctx.strokeStyle = glyphOutlineColor;
-      ctx.lineWidth   = 1 * scaleUp;
+      ctx.lineWidth   = outlineThickness * scaleUp;
       ctx.stroke();
     }
 
@@ -948,12 +969,12 @@ const ClasspectGlyph = React.forwardRef(({
             <div
               style={{
                 position: 'absolute',
-                top:  `${discCyPx - discSize / 2 - (glyphOutlineColor ? 1 : 0)}px`,
-                left: `${discCxPx - discSize / 2 - (glyphOutlineColor ? 1 : 0)}px`,
-                width:  `${discSize + (glyphOutlineColor ? 2 : 0)}px`,
-                height: `${discSize + (glyphOutlineColor ? 2 : 0)}px`,
+                top:  `${discCyPx - discSize / 2 - (glyphOutlineColor ? outlineThickness : 0)}px`,
+                left: `${discCxPx - discSize / 2 - (glyphOutlineColor ? outlineThickness : 0)}px`,
+                width:  `${discSize + (glyphOutlineColor ? 2 * outlineThickness : 0)}px`,
+                height: `${discSize + (glyphOutlineColor ? 2 * outlineThickness : 0)}px`,
                 borderRadius: '50%', background: bgColor, boxSizing: 'border-box',
-                border: glyphOutlineColor ? `1px solid ${glyphOutlineColor}` : 'none',
+                border: glyphOutlineColor ? `${outlineThickness}px solid ${glyphOutlineColor}` : 'none',
               }}
             />
           )}
@@ -969,10 +990,12 @@ const ClasspectGlyph = React.forwardRef(({
           )}
           <div style={ringRotatorStyle}>
             <div style={ringStyle}/>
+            {/* Inline the SVG. */}
             {ringStroke && (
-              <div style={strokeOverlayWrapperStyle}>
-                <img src={ringStroke.dataUrl} alt="" style={strokeOverlayImgStyle}/>
-              </div>
+              <div
+                style={strokeOverlayWrapperStyle}
+                dangerouslySetInnerHTML={{ __html: ringStroke.svg }}
+              />
             )}
           </div>
           {substanceLayer}
