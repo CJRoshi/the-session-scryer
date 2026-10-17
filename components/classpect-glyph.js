@@ -532,7 +532,13 @@ const ClasspectGlyph = React.forwardRef(({
   const holeCxFrac     = ringGeom?.holeCxFrac  ?? 0.5;
   const holeCyFrac     = ringGeom?.holeCyFrac  ?? 0.5;
 
-  const ringScale    = 1 / ringOuterFrac;
+  // Small safety margin so the ring's cardinal-direction spike tips
+  // (and their non-scaling-stroke halo) aren't flattened against the
+  // inner box edges during rotation. All content (ring, hole, disc)
+  // shrinks by the same factor so the disc stays in the ring's hole.
+  const RING_SAFETY_MARGIN = 0.03;
+  const ringFillFrac = 1 - RING_SAFETY_MARGIN;
+  const ringScale    = ringFillFrac / ringOuterFrac;
   const ringScalePct = (100 * ringScale).toFixed(2) + '%';
   const mxPct = ringScale > 1
     ? (100 * (outerCxFrac * ringScale - 0.5) / (ringScale - 1)).toFixed(2) + '%'
@@ -541,7 +547,7 @@ const ClasspectGlyph = React.forwardRef(({
     ? (100 * (outerCyFrac * ringScale - 0.5) / (ringScale - 1)).toFixed(2) + '%'
     : '50%';
 
-  const holeSize = innerSize * (ringHoleFrac / ringOuterFrac) * 2;
+  const holeSize = innerSize * (ringHoleFrac / ringOuterFrac) * 2 * ringFillFrac;
   const discSize = Math.round(holeSize * DISC_OVERSHOOT);
   const discCxPx = innerSize * ((holeCxFrac - outerCxFrac) * ringScale + 0.5);
   const discCyPx = innerSize * ((holeCyFrac - outerCyFrac) * ringScale + 0.5);
@@ -670,9 +676,15 @@ const ClasspectGlyph = React.forwardRef(({
       sctx.drawImage(ringGeom.img, rx, ry, ringDrawSize, ringDrawSize);
       sctx.globalCompositeOperation = 'source-in';
       if (ringPaint.kind === 'gradient') {
+        // Gradient coordinates are ABSOLUTE canvas pixels (not affected
+        // by the current transform), so shift by PAD so the center
+        // lands on the glyph's center, not (OUT/2, OUT/2) which is
+        // PAD px off-center on the padded canvas.
+        const gcx = OUT / 2 + PAD;
+        const gcy = OUT / 2 + PAD;
         const grad = sctx.createRadialGradient(
-          OUT / 2, OUT / 2, cs(holeSize / 2),
-          OUT / 2, OUT / 2, OUT / 2,
+          gcx, gcy, cs(holeSize / 2),
+          gcx, gcy, OUT / 2,
         );
         grad.addColorStop(0, ringPaint.inner);
         grad.addColorStop(1, ringPaint.outer);
