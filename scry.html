@@ -4346,10 +4346,12 @@ const GlyphGallery = ({ session, lead, odd, knit, cen, luna, specialContext, cha
                  alignItems: 'center', gap: '6px',
                  cursor: 'pointer',
                  // Keep the tile from exceeding its column, and keep
-                 // long labels from pushing sibling tiles around.
+                 // long labels from pushing sibling tiles around. The
+                 // label itself clips below; the tile wrapper stays
+                 // overflow:visible so the glyph's ring halo isn't
+                 // squared off at the cardinal spikes.
                  maxWidth: '100%',
                  minWidth: 0,
-                 overflow: 'hidden',
                }}
                title="Click to see the animated + annotated version">
             <ClasspectGlyph
