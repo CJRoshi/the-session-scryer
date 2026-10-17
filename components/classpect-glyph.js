@@ -624,10 +624,16 @@ const ClasspectGlyph = React.forwardRef(({
 
     const OUT     = outputSize;
     const scaleUp = OUT / innerSize;               // maps inner-glyph px → canvas px
+    // When the outline is on, pad the canvas on all four sides so the
+    // ring stroke overlay doesn't get clipped at the top / bottom / left / right
+    // cardinal tips. With no outline, output stays exactly OUT × OUT.
+    const PAD = glyphOutlineColor ? Math.max(8, Math.ceil(outlineThickness * scaleUp * 2)) : 0;
+    const CANVAS = OUT + 2 * PAD;
     const canvas  = document.createElement('canvas');
-    canvas.width  = OUT;
-    canvas.height = OUT;
+    canvas.width  = CANVAS;
+    canvas.height = CANVAS;
     const ctx = canvas.getContext('2d');
+    ctx.translate(PAD, PAD);
     // Canvas is transparent by default — no fill needed.
 
     const cs = (v) => v * scaleUp;
@@ -650,12 +656,14 @@ const ClasspectGlyph = React.forwardRef(({
       ctx.drawImage(aspectAsset.img, cs(discCxPx) - aw / 2, cs(discCyPx + aspectYOffset) - ah / 2, aw, ah);
     }
 
-    // 3. Ring (mask + fill), tinted via scratch canvas + source-in.
+    // 3. Ring (mask + fill), tinted via scratch canvas + source-in. The
+    // scratch canvas gets the same PAD so the ring + its halo have room.
     if (ringGeom.img) {
       const scratch = document.createElement('canvas');
-      scratch.width  = OUT;
-      scratch.height = OUT;
+      scratch.width  = CANVAS;
+      scratch.height = CANVAS;
       const sctx = scratch.getContext('2d');
+      sctx.translate(PAD, PAD);
       const ringDrawSize = OUT * ringScale;
       const rx = OUT / 2 - outerCxFrac * ringDrawSize;
       const ry = OUT / 2 - outerCyFrac * ringDrawSize;
@@ -672,8 +680,12 @@ const ClasspectGlyph = React.forwardRef(({
       } else {
         sctx.fillStyle = ringPaint.color;
       }
-      sctx.fillRect(0, 0, OUT, OUT);
+      sctx.setTransform(1, 0, 0, 1, 0, 0);
+      sctx.fillRect(0, 0, CANVAS, CANVAS);
+      ctx.save();
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.drawImage(scratch, 0, 0);
+      ctx.restore();
 
       // 4. Ring stroke overlay (only when outline mode is on).
       if (glyphOutlineColor && ringStroke?.img && ringStroke.img.complete) {
@@ -960,7 +972,11 @@ const ClasspectGlyph = React.forwardRef(({
           border:     frameless ? 'none' : `${BORDER}px solid ${boxBorderColor}`,
           borderRadius: frameless ? 0 : '12px',
           position: 'relative',
-          overflow: frameless ? 'visible' : 'hidden',
+          // overflow:visible so a wide-spiked ring (small ringOuterFrac →
+          // large ringScale) isn't squared off at the cardinal tips by
+          // the box edge during rotation. A thin halo/tip extending
+          // past the border is cheaper than clipping it flat.
+          overflow: 'visible',
           padding: `${padding}px`, boxSizing: 'border-box',
         }}
       >
