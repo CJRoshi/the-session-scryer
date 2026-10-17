@@ -534,12 +534,7 @@ const ClasspectGlyph = React.forwardRef(({
 
   // Safety margin so the ring's cardinal-direction spike tips (and
   // their non-scaling-stroke halo) aren't flattened against the inner
-  // box edges during rotation. Size-aware so small glyphs (preview /
-  // gallery tiles) also get enough absolute room for the outline
-  // halo; capped at 15% so tiny glyphs don't shrink the ring absurdly.
-  // All content (ring, hole, disc, gradient stops) shrinks uniformly
-  // by the same factor so the disc stays in the ring hole and the
-  // gradient stays centered.
+  // box edges during rotation.
   const RING_SAFETY_MARGIN = Math.min(0.15,
     Math.max(0.04, (outlineThickness * 3 + 3) / Math.max(innerSize, 1)));
   const ringFillFrac = 1 - RING_SAFETY_MARGIN;
