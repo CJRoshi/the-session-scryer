@@ -4969,7 +4969,17 @@ const App = () => {
     });
     window.scryball.play();
     try {
-      window.history.pushState({ frame: 'inside' }, '', '#inside');
+      // Persist the session via the URL hash so reload / back-nav
+      // restores the same session. Prefer a readable alias when the
+      // code matches a known special session (BetaKids / HSOD / …);
+      // otherwise fall back to the raw hex code. '#inside' is no
+      // longer used as a bare marker — the presence of ANY non-empty
+      // hash means "inside" view.
+      const specialHit = (typeof specialSessionByCode === 'function')
+        ? specialSessionByCode(sessionCode) : null;
+      const alias = specialHit && specialHit.aliases && specialHit.aliases[0];
+      const hashVal = alias || sessionCode || 'inside';
+      window.history.pushState({ frame: 'inside' }, '', '#' + hashVal);
     } catch (_) { /* private browsing / sandboxed: ignore */ }
   };
 
@@ -5009,9 +5019,33 @@ const App = () => {
     setTimeout(() => { absconding.current = false; }, 0);
   };
 
+  // Keep the URL hash in sync with the live session while in inside
+  // view, so a mid-session edit (add/remove member via the grid) also
+  // survives reload. Uses replaceState so edits don't spam history.
+  useEffect(() => {
+    if (frame !== 'inside') return;
+    try {
+      const specialHit = (typeof specialSessionByCode === 'function')
+        ? specialSessionByCode(sessionCode) : null;
+      const alias = specialHit && specialHit.aliases && specialHit.aliases[0];
+      const hashVal = alias || sessionCode || 'inside';
+      const target = '#' + hashVal;
+      if (window.location.hash !== target) {
+        window.history.replaceState(
+          window.history.state, '',
+          window.location.pathname + window.location.search + target
+        );
+      }
+    } catch (_) { /* ignore */ }
+  }, [frame, sessionCode]);
+
   useEffect(() => {
     const onPop = () => {
-      const wantsInside = window.location.hash === '#inside';
+      const rawHash = (window.location.hash || '').replace(/^#/, '');
+      // Any non-empty hash = inside view. We used to use '#inside' as
+      // a marker, but now the actual session code (or alias) lives
+      // there so reload / back-nav can restore the session.
+      const wantsInside = rawHash.length > 0;
       if (!wantsInside && frame === 'inside') {
         if (window.scryball) window.scryball.reset();
         setLunarFocus('all');
@@ -5019,6 +5053,17 @@ const App = () => {
         setHoveredKnit(false);
         setFrame('entry');
       } else if (wantsInside && frame === 'entry') {
+        // If the back-nav brought us to a session hash while the
+        // app was reset to entry (e.g. settings → back), decode the
+        // hash so the inside view has members to render.
+        const alias = (typeof specialSessionByAlias === 'function')
+          ? specialSessionByAlias(rawHash) : null;
+        const effectiveCode = alias ? alias.code : rawHash;
+        const result = decodeSession(effectiveCode);
+        if (result.players.length > 0) {
+          lastEditor.current = 'code';
+          setSession(result.players);
+        }
         setFrame('inside');
       }
     };
