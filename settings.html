@@ -196,17 +196,30 @@
 <script type="text/babel">
   const { ScryerHeader, ScryerFooter } = window;
 
+  const LUNAR_SWAY_OUTLINE_OPTIONS = new Set(['automatic', 'prospit', 'derse', 'neutral']);
   const EnumSetting = ({ name, spec }) => {
     const [value, setValue] = React.useState(() => ScryerSettings.get(name));
+    // Cross-setting: when Ring color is 'Lunar Sway', lunar-sway outline
+    // modes (Auto / Prospit / Derse / Neutral) are visually locked out —
+    // they'd just redraw the same color at the ring edges.
+    const [ringMode, setRingMode] = React.useState(() => ScryerSettings.get('glyphRingMode'));
+    React.useEffect(() => {
+      const onChange = (ev) => {
+        if (ev.detail?.name === 'glyphRingMode') setRingMode(ScryerSettings.get('glyphRingMode'));
+      };
+      window.addEventListener('scryer-setting-change', onChange);
+      return () => window.removeEventListener('scryer-setting-change', onChange);
+    }, []);
+    const isOutlineLocked = (v) =>
+      name === 'glyphOutlineMode'
+      && ringMode === 'lunarSway'
+      && LUNAR_SWAY_OUTLINE_OPTIONS.has(v);
+
     const handle = (v) => {
+      if (isOutlineLocked(v)) return;
       ScryerSettings.set(name, v);
       setValue(v);
     };
-    // Optional per-value display overrides:
-    //   `valueLabels[v]` — human-friendly button caption (fallback: v)
-    //   `valueStyles[v]` — CSS style object applied to that button
-    //                      (used for the substanceFont picker so each
-    //                      option previews its own font family)
     return (
       <div className="setting-row">
         <div className="setting-label-block">
@@ -215,16 +228,24 @@
         </div>
         <div className="setting-control">
           <div className={'segmented' + (spec.values.length >= 5 ? ' segmented--wrap' : '')}>
-            {spec.values.map(v => (
-              <button
-                key={v}
-                onClick={() => handle(v)}
-                className={v === value ? 'active' : ''}
-                style={spec.valueStyles ? spec.valueStyles[v] : undefined}
-              >
-                {spec.valueLabels ? spec.valueLabels[v] : v}
-              </button>
-            ))}
+            {spec.values.map(v => {
+              const locked = isOutlineLocked(v);
+              return (
+                <button
+                  key={v}
+                  onClick={() => handle(v)}
+                  className={v === value ? 'active' : ''}
+                  disabled={locked}
+                  title={locked ? 'Not available while Ring color is Lunar Sway' : undefined}
+                  style={{
+                    ...(spec.valueStyles ? spec.valueStyles[v] : {}),
+                    ...(locked ? { opacity: 0.4, cursor: 'not-allowed' } : {}),
+                  }}
+                >
+                  {spec.valueLabels ? spec.valueLabels[v] : v}
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>

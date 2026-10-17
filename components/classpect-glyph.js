@@ -87,8 +87,10 @@ function interpHex(a, b, t) {
   return rgbToHex(ar + (br - ar) * t, ag + (bg - ag) * t, ab + (bb - ab) * t);
 }
 
-/* Resolve the ring color for a (mode, class, aspect) tuple. */
-function resolveRingColor(mode, className, aspectName) {
+/* Resolve the ring color for a (mode, class, aspect) tuple. For modes
+   that need character data (lunarSway), canonChars + nonCanonChars are
+   also consulted. */
+function resolveRingColor(mode, className, aspectName, canonChars, nonCanonChars) {
   const asp = aspectName.toLowerCase();
   const cls = className;
 
@@ -101,6 +103,23 @@ function resolveRingColor(mode, className, aspectName) {
     const sign = GLYPH_CLASS_SIGN[cls] || 0;
     const t = (sign - (-7)) / 14;
     return { kind: 'solid', color: interpHex(GS_LORD_DARK, GS_MUSE_LIGHT, t) };
+  }
+  if (mode === 'lunarSway') {
+    // Flat ring colored by the first member's lunar sway. Prospit=yellow,
+    // Derse=magenta, None/Dual/absent=neutral gray.
+    const SWAY_COLOR = { prospit: '#ffff01', derse: '#ff01fe' };
+    const pickSway = (list) => {
+      if (!list) return null;
+      for (const ch of list) {
+        if (ch && ch.lunarsway) {
+          const key = ch.lunarsway.toLowerCase();
+          if (key === 'prospit' || key === 'derse') return key;
+        }
+      }
+      return null;
+    };
+    const sway = pickSway(canonChars) || pickSway(nonCanonChars);
+    return { kind: 'solid', color: sway ? SWAY_COLOR[sway] : '#808080' };
   }
   if (mode === 'gradient' || mode === 'gradientR') {
     // If FG is dark enough that darkening would blow out to pure black
@@ -507,10 +526,18 @@ const ClasspectGlyph = React.forwardRef(({
     return () => window.removeEventListener('scryer-setting-change', onChange);
   }, []);
   const ringMode    = ringModeProp    ?? ringModeSetting    ?? 'canonical';
-  const outlineMode = outlineModeProp ?? outlineModeSetting ?? 'none';
+  const rawOutlineMode = outlineModeProp ?? outlineModeSetting ?? 'none';
+  // When the ring is colored by lunar sway, lunar-sway-based outlines
+  // (auto / prospit / derse / neutral) would just redraw the same color
+  // at the edges. Force to 'none'; keep 'text' and 'none' usable.
+  const outlineMode = (ringMode === 'lunarSway'
+                       && rawOutlineMode !== 'none'
+                       && rawOutlineMode !== 'text')
+                        ? 'none'
+                        : rawOutlineMode;
   const outlineThickness = Math.max(1, parseInt(outlineThkSetting, 10) || 1);
 
-  const ringPaint         = resolveRingColor(ringMode, className, aspectName);
+  const ringPaint         = resolveRingColor(ringMode, className, aspectName, canonCharacters, nonCanonCharacters);
   const glyphOutlineColor = resolveOutlineColor(outlineMode, canonCharacters, nonCanonCharacters);
   const bgColor           = BG_COLORS[asp] || '#000000';
 
