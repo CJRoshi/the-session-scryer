@@ -554,8 +554,12 @@ const ClasspectGlyph = React.forwardRef(({
 
   const ringMaskUrl = `./images/classes/rings/${cls}.svg`;
   const holeRadiusPct = (holeSize / innerSize) * 100;
+  // Outer stop lands on the ring's actual outer edge (shrunk by
+  // ringFillFrac from the safety margin), not the container edge — so
+  // the ring's outermost pixels still hit the full dark stop.
+  const outerStopPct = (100 * ringFillFrac).toFixed(2);
   const ringBackground = ringPaint.kind === 'gradient'
-    ? `radial-gradient(circle closest-side at 50% 50%, ${ringPaint.inner} ${holeRadiusPct.toFixed(2)}%, ${ringPaint.outer} 100%)`
+    ? `radial-gradient(circle closest-side at 50% 50%, ${ringPaint.inner} ${holeRadiusPct.toFixed(2)}%, ${ringPaint.outer} ${outerStopPct}%)`
     : ringPaint.color;
 
   // When `spinAngle` is a number, the physics loop is driving rotation
@@ -678,13 +682,14 @@ const ClasspectGlyph = React.forwardRef(({
       if (ringPaint.kind === 'gradient') {
         // Gradient coordinates are ABSOLUTE canvas pixels (not affected
         // by the current transform), so shift by PAD so the center
-        // lands on the glyph's center, not (OUT/2, OUT/2) which is
-        // PAD px off-center on the padded canvas.
+        // lands on the glyph's center. Outer radius lands on the ring's
+        // actual outer edge (shrunk by the safety margin), matching
+        // the DOM gradient so edge pixels hit the full outer stop.
         const gcx = OUT / 2 + PAD;
         const gcy = OUT / 2 + PAD;
         const grad = sctx.createRadialGradient(
           gcx, gcy, cs(holeSize / 2),
-          gcx, gcy, OUT / 2,
+          gcx, gcy, (OUT / 2) * ringFillFrac,
         );
         grad.addColorStop(0, ringPaint.inner);
         grad.addColorStop(1, ringPaint.outer);
