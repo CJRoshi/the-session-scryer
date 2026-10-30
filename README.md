@@ -8,7 +8,7 @@ Inspired by *Homestuck* by Andrew Hussie.
 
 ## Most Recent Update
 
-Fresh Blood (10/13/2026)
+Fresh Blood (10/13/2026), Hotfix 1 (10/30/2026):
 
 - Recentered the Blood emblem inside its glyph disc (gash now sits at the disc center)
 - HSOD 2026 session: small updates
@@ -30,7 +30,8 @@ Prediction Schmonviction (6/27/2026)
 
 ### Hotfixes
 
-- Hotfix 1 (Planned) -- Day Zero, Merch
+- Hotfix 1 -- New Image Settings, file reorganization
+- Hotfix 2 -- Merch
 
 ### Past Updates
 

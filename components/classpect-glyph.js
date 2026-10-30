@@ -516,15 +516,19 @@ const ClasspectGlyph = React.forwardRef(({
   const [ringModeSetting,    setRingModeSetting]    = React.useState(() => ScryerSettings.get('glyphRingMode'));
   const [outlineModeSetting, setOutlineModeSetting] = React.useState(() => ScryerSettings.get('glyphOutlineMode'));
   const [outlineThkSetting,  setOutlineThkSetting]  = React.useState(() => ScryerSettings.get('glyphOutlineThickness'));
+  const [imageFmtSetting,    setImageFmtSetting]    = React.useState(() => ScryerSettings.get('imageExportFormat'));
   React.useEffect(() => {
     const onChange = (ev) => {
       if (ev.detail?.name === 'glyphRingMode')         setRingModeSetting(ScryerSettings.get('glyphRingMode'));
       if (ev.detail?.name === 'glyphOutlineMode')      setOutlineModeSetting(ScryerSettings.get('glyphOutlineMode'));
       if (ev.detail?.name === 'glyphOutlineThickness') setOutlineThkSetting(ScryerSettings.get('glyphOutlineThickness'));
+      if (ev.detail?.name === 'imageExportFormat')     setImageFmtSetting(ScryerSettings.get('imageExportFormat'));
     };
     window.addEventListener('scryer-setting-change', onChange);
     return () => window.removeEventListener('scryer-setting-change', onChange);
   }, []);
+  // SVG export can't currently embed the substance layer; drop if selected.
+  if (imageFmtSetting === 'svg') substance = null;
   const ringMode    = ringModeProp    ?? ringModeSetting    ?? 'canonical';
   const rawOutlineMode = outlineModeProp ?? outlineModeSetting ?? 'none';
   // When the ring is colored by lunar sway, lunar-sway-based outlines
@@ -581,12 +585,19 @@ const ClasspectGlyph = React.forwardRef(({
 
   const ringMaskUrl = `./images/classes/rings/${cls}.svg`;
   const holeRadiusPct = (holeSize / innerSize) * 100;
-  // Outer stop lands on the ring's actual outer edge (shrunk by
-  // ringFillFrac from the safety margin), not the container edge — so
-  // the ring's outermost pixels still hit the full dark stop.
-  const outerStopPct = (100 * ringFillFrac).toFixed(2);
+  // Hold each color for a small band at its own end so the ring body
+  // shows pure color near its two edges.
+  const GRAD_HOLD_FRAC = 0.08;
+  const outerStop = 100 * ringFillFrac;
+  const bodySpan = outerStop - holeRadiusPct;
+  const innerHoldPct = holeRadiusPct + bodySpan * GRAD_HOLD_FRAC;
+  const outerHoldPct = outerStop     - bodySpan * GRAD_HOLD_FRAC;
   const ringBackground = ringPaint.kind === 'gradient'
-    ? `radial-gradient(circle closest-side at 50% 50%, ${ringPaint.inner} ${holeRadiusPct.toFixed(2)}%, ${ringPaint.outer} ${outerStopPct}%)`
+    ? `radial-gradient(circle closest-side at 50% 50%, `
+      + `${ringPaint.inner} ${holeRadiusPct.toFixed(2)}%, `
+      + `${ringPaint.inner} ${innerHoldPct.toFixed(2)}%, `
+      + `${ringPaint.outer} ${outerHoldPct.toFixed(2)}%, `
+      + `${ringPaint.outer} ${outerStop.toFixed(2)}%)`
     : ringPaint.color;
 
   // When `spinAngle` is a number, the physics loop is driving rotation
@@ -718,8 +729,13 @@ const ClasspectGlyph = React.forwardRef(({
           gcx, gcy, cs(holeSize / 2),
           gcx, gcy, (OUT / 2) * ringFillFrac,
         );
-        grad.addColorStop(0, ringPaint.inner);
-        grad.addColorStop(1, ringPaint.outer);
+        // Hold each color at its own end so the ring body shows pure
+        // color near both edges.
+        const H = 0.08;
+        grad.addColorStop(0,     ringPaint.inner);
+        grad.addColorStop(H,     ringPaint.inner);
+        grad.addColorStop(1 - H, ringPaint.outer);
+        grad.addColorStop(1,     ringPaint.outer);
         sctx.fillStyle = grad;
       } else {
         sctx.fillStyle = ringPaint.color;
@@ -792,16 +808,139 @@ const ClasspectGlyph = React.forwardRef(({
       }
     }
 
-    return await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+    // Honor the user's image-format setting.
+    const fmt = (() => {
+      try { return ScryerSettings.get('imageExportFormat') || 'png'; }
+      catch { return 'png'; }
+    })();
+    const mime = fmt === 'webp' ? 'image/webp'
+               : fmt === 'jpg'  ? 'image/jpeg'
+               :                  'image/png';
+    if (mime === 'image/jpeg') {
+      const flat = document.createElement('canvas');
+      flat.width = canvas.width; flat.height = canvas.height;
+      const fctx = flat.getContext('2d');
+      fctx.fillStyle = '#ffffff';
+      fctx.fillRect(0, 0, flat.width, flat.height);
+      fctx.drawImage(canvas, 0, 0);
+      return await new Promise((resolve) => flat.toBlob(resolve, mime, 0.92));
+    }
+    return await new Promise((resolve) => canvas.toBlob(resolve, mime));
+  };
+
+  /* True-vector SVG composer. */
+  const composeStaticSvg = async (outputSize = 1024) => {
+    if (!ringGeom || !aspectAsset) return null;
+    const OUT     = outputSize;
+    const scaleUp = OUT / innerSize;
+    const cs = (v) => v * scaleUp;
+    const PAD = glyphOutlineColor ? Math.max(8, Math.ceil(outlineThickness * scaleUp * 2)) : 0;
+    const CANVAS = OUT + 2 * PAD;
+
+    const ringDrawSize = OUT * ringScale;
+    const rx = OUT / 2 - outerCxFrac * ringDrawSize;
+    const ry = OUT / 2 - outerCyFrac * ringDrawSize;
+    const ringX = PAD + rx, ringY = PAD + ry;
+    const discR = cs(discSize / 2);
+    const discX = PAD + cs(discCxPx), discY = PAD + cs(discCyPx);
+    const aw = cs(aspectRenderW), ah = cs(aspectRenderH);
+    const asX = PAD + cs(discCxPx) - aw / 2;
+    const asY = PAD + cs(discCyPx + aspectYOffset) - ah / 2;
+
+    const ringText = await fetchRingSvgText(cls);
+    const ringDoc  = new DOMParser().parseFromString(ringText, 'image/svg+xml');
+    const ringEl   = ringDoc.documentElement;
+    ringEl.querySelectorAll('style').forEach((s) => s.remove());
+    const SHAPES = 'path, ellipse, circle, rect, polygon, polyline, line';
+    const vbAttr = ringEl.getAttribute('viewBox');
+    let rvbX = 0, rvbY = 0, rvbW = 100, rvbH = 100;
+    if (vbAttr) {
+      const p = vbAttr.split(/[\s,]+/).map(Number);
+      if (p.length === 4) [rvbX, rvbY, rvbW, rvbH] = p;
+    }
+
+    // Gradient def scoped inside the nested ring <svg>.
+    let ringFillVal, ringGradientDef = '';
+    if (ringPaint.kind === 'gradient') {
+      const gcx = rvbX + outerCxFrac * rvbW;
+      const gcy = rvbY + outerCyFrac * rvbH;
+      const outerR = (Math.max(rvbW, rvbH) / 2) * ringOuterFrac;
+      const innerR = ringHoleFrac * rvbW;
+      // Hold each color for the inner/outer 8% so the ring body shows
+      // pure color near both edges without a visible band — same shape
+      // as the DOM/canvas stops.
+      const H = 8;
+      ringGradientDef =
+        `<defs><radialGradient id="ring-grad" gradientUnits="userSpaceOnUse" ` +
+        `cx="${gcx}" cy="${gcy}" r="${outerR}" ` +
+        `fx="${gcx}" fy="${gcy}" fr="${innerR}">` +
+          `<stop offset="0%" stop-color="${ringPaint.inner}"/>` +
+          `<stop offset="${H}%" stop-color="${ringPaint.inner}"/>` +
+          `<stop offset="${100 - H}%" stop-color="${ringPaint.outer}"/>` +
+          `<stop offset="100%" stop-color="${ringPaint.outer}"/>` +
+        `</radialGradient></defs>`;
+      ringFillVal = 'url(#ring-grad)';
+    } else {
+      ringFillVal = ringPaint.color;
+    }
+    ringEl.querySelectorAll(SHAPES).forEach((s) => {
+      s.removeAttribute('class');
+      s.removeAttribute('style');
+      s.setAttribute('fill', ringFillVal);
+    });
+    const ser = new XMLSerializer();
+    const ringInner = Array.from(ringEl.childNodes)
+      .map((n) => n.nodeType === 1 ? ser.serializeToString(n) : '')
+      .join('');
+
+    const escAttr = (v) => String(v).replace(/[&<>"']/g, (c) => (
+      { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+    ));
+
+    let out = `<?xml version="1.0" encoding="UTF-8"?>\n`;
+    out += `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" `;
+    out += `viewBox="0 0 ${CANVAS} ${CANVAS}" width="${CANVAS}" height="${CANVAS}">`;
+    out += `<circle cx="${discX}" cy="${discY}" r="${discR}" fill="${escAttr(bgColor)}"`;
+    if (glyphOutlineColor) {
+      out += ` stroke="${escAttr(glyphOutlineColor)}" stroke-width="${outlineThickness * scaleUp}"`;
+    }
+    out += `/>`;
+    out += `<image href="${escAttr(aspectAsset.dataUrl)}" x="${asX}" y="${asY}" `;
+    out += `width="${aw}" height="${ah}" preserveAspectRatio="xMidYMid meet"/>`;
+    out += `<svg x="${ringX}" y="${ringY}" width="${ringDrawSize}" height="${ringDrawSize}" `;
+    out += `viewBox="${rvbX} ${rvbY} ${rvbW} ${rvbH}" preserveAspectRatio="xMidYMid meet">`;
+    out += ringGradientDef;
+    out += ringInner;
+    out += `</svg>`;
+    if (glyphOutlineColor && ringStroke?.dataUrl) {
+      out += `<image href="${escAttr(ringStroke.dataUrl)}" x="${ringX}" y="${ringY}" `;
+      out += `width="${ringDrawSize}" height="${ringDrawSize}" preserveAspectRatio="xMidYMid meet"/>`;
+    }
+    out += `</svg>`;
+    return new Blob([out], { type: 'image/svg+xml;charset=utf-8' });
+  };
+
+  const getExportFormat = () => {
+    let f;
+    try { f = ScryerSettings.get('imageExportFormat') || 'png'; } catch { f = 'png'; }
+    switch (f) {
+      case 'webp': return { ext: 'webp', mime: 'image/webp' };
+      case 'jpg':  return { ext: 'jpg',  mime: 'image/jpeg' };
+      case 'svg':  return { ext: 'svg',  mime: 'image/svg+xml' };
+      default:     return { ext: 'png',  mime: 'image/png'  };
+    }
   };
 
   const handleDownload = async () => {
-    const blob = await composeStaticPng();
+    const { ext, mime } = getExportFormat();
+    const blob = mime === 'image/svg+xml'
+      ? await composeStaticSvg()
+      : await composeStaticPng();
     if (!blob) return;
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${cls}-of-${asp}.png`;
+    a.download = `${cls}-of-${asp}.${ext}`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -811,10 +950,19 @@ const ClasspectGlyph = React.forwardRef(({
   };
 
   const handleCopy = async () => {
+    const { mime } = getExportFormat();
+    // Browsers don't accept image/svg+xml on the clipboard — fall back
+    // to PNG for the clipboard payload. Downloads still get real SVG.
+    const clipMime = mime === 'image/svg+xml' ? 'image/png' : mime;
     const blob = await composeStaticPng();
     if (!blob) return;
     try {
-      await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+      try {
+        await navigator.clipboard.write([new ClipboardItem({ [clipMime]: blob })]);
+      } catch (e) {
+        const pngBlob = await composeStaticPng();
+        await navigator.clipboard.write([new ClipboardItem({ 'image/png': pngBlob })]);
+      }
       setCopied(true);
       setTimeout(() => setCopied(false), 1200);
     } catch (err) {
@@ -824,10 +972,11 @@ const ClasspectGlyph = React.forwardRef(({
   };
 
   // Imperative handle — lets parent components (e.g. the Scryer's
-  // gallery zip-download flow) trigger PNG composition on any glyph
-  // instance.
+  // gallery zip-download flow) trigger PNG or SVG composition on any
+  // glyph instance.
   React.useImperativeHandle(ref, () => ({
     composeStaticPng: (outputSize) => composeStaticPng(outputSize),
+    composeStaticSvg: (outputSize) => composeStaticSvg(outputSize),
     isReady:          () => Boolean(ringGeom && aspectAsset),
   }));
 
@@ -1062,24 +1211,32 @@ const ClasspectGlyph = React.forwardRef(({
         </div>
       </div>
 
-      {showButtons && (
+      {showButtons && (() => {
+        const fmtLabel = imageFmtSetting === 'webp' ? 'WebP'
+                       : imageFmtSetting === 'jpg'  ? 'JPG'
+                       : imageFmtSetting === 'svg'  ? 'SVG'
+                       :                              'PNG';
+        return (
         <div style={{display: 'flex', gap: '10px'}}>
-          <button className="classpect-glyph-btn" onClick={handleCopy} title="Copy static PNG to clipboard">
+          <button className="classpect-glyph-btn" onClick={handleCopy}
+                  title={`Copy static image to clipboard (${fmtLabel === 'SVG' ? 'as PNG — clipboard doesn’t accept SVG' : fmtLabel})`}>
             <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
               <rect x="9" y="2" width="6" height="4" rx="1"/>
               <path d="M8 4H6a2 2 0 00-2 2v14a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-2"/>
             </svg>
             {copied ? '✓ Copied' : 'Copy'}
           </button>
-          <button className="classpect-glyph-btn" onClick={handleDownload} title="Download static PNG">
+          <button className="classpect-glyph-btn" onClick={handleDownload}
+                  title={`Download static ${fmtLabel}`}>
             <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
               <path d="M12 5v10m0 0l-4-4m4 4l4-4" strokeLinecap="round"/>
               <path d="M4 17v2a1 1 0 001 1h14a1 1 0 001-1v-2" strokeLinecap="round"/>
             </svg>
-            {downloaded ? '✓ Saved' : 'Save PNG'}
+            {downloaded ? '✓ Saved' : `Save ${fmtLabel}`}
           </button>
         </div>
-      )}
+        );
+      })()}
     </div>
   );
 });

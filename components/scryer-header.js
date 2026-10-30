@@ -31,7 +31,7 @@ const ScryerHeader = ({ children }) => {
   const textColor    = '#f4f4f4';
 
   /* Logo path. */
-  const logoSrc = './images/logos/ScryerLogoRegular.png';
+  const logoSrc = './images/logos/regular.png';
 
   /* Nav-link styling mirrors CC's navLinkStyle: dark semi-transparent
      background, rounded, current-textColor text. */
@@ -45,12 +45,22 @@ const ScryerHeader = ({ children }) => {
     padding: '8px 12px',
     fontFamily: "'Typostuck', 'Courier New', monospace",
   };
-  /* FRAFpost accent — same green CC uses for the external forum link. */
+  /* FRAF button */
   const frafStyle = {
     ...navLinkStyle,
     backgroundColor: 'rgba(0,0,0,0.4)',
-    color: '#00e371',
+    color: '#00e371',  // fallback only; letter spans override.
   };
+  // Canonical FRAF wordmark.
+  const FrafWordmark = ({ trailing }) => (
+    <>
+      <span style={{ color: '#fe140d' }}>F</span>
+      <span style={{ color: '#14ff08' }}>R</span>
+      <span style={{ color: '#ffaf0d' }}>A</span>
+      <span style={{ color: '#ffff0e' }}>F</span>
+      {trailing}
+    </>
+  );
 
   /* Connector accent */
   const connectorStyle = {
@@ -154,6 +164,29 @@ const ScryerHeader = ({ children }) => {
           .scryer-header-title { font-size: 1.4rem; }
           .scryer-header-logo  { width: 48px; height: 48px; }
         }
+
+        /* Collapsible stacked title. */
+        .scryer-site-title {
+          display: inline-flex;
+          flex-direction: column;
+          justify-content: center;
+          line-height: 1.05;
+          min-width: 0;
+        }
+        .scryer-site-title-full  { display: inline; }
+        .scryer-site-title-stack { display: none; }
+        @media (max-width: 720px) {
+          .scryer-site-title-full  { display: none; }
+          .scryer-site-title-stack {
+            display: flex;
+            flex-direction: column;
+            font-size: 1.2rem;
+            line-height: 1.1;
+          }
+          .scryer-site-title-stack .scryer-site-title-top { padding-left: 0; }
+          .scryer-site-title-stack .scryer-site-title-bot { padding-left: 1.1em; }
+          .scryer-header-title { font-size: 1.2rem; }
+        }
       `}</style>
       <div className="flex items-center justify-between"
            style={{ maxWidth: '1200px', margin: '0 auto' }}>
@@ -169,8 +202,12 @@ const ScryerHeader = ({ children }) => {
               }}
             />
           </a>
-          <a href="./index.html" className="scryer-header-title" style={titleStyle}>
-            The Session Scryer
+          <a href="./index.html" className="scryer-header-title scryer-site-title" style={titleStyle}>
+            <span className="scryer-site-title-full">The Session Scryer</span>
+            <span className="scryer-site-title-stack">
+              <span className="scryer-site-title-top">Session</span>
+              <span className="scryer-site-title-bot">Scryer</span>
+            </span>
           </a>
         </div>
 
@@ -192,12 +229,12 @@ const ScryerHeader = ({ children }) => {
              style={connectorStyle}>
             Connector
           </a>
-          <a href="https://www.fruityrumpus.com/forums/t/classpecting-with-graphs-rotations-and-groups"
+          <a href="https://www.fruityrumpus.com/"
              target="_blank"
              rel="noopener noreferrer"
              className="hover:opacity-80"
              style={frafStyle}>
-            FRAFpost
+            <FrafWordmark/>
           </a>
           {/* Settings gear — square icon button at the far right of the
               desktop nav row, distinct from the text pills. */}
@@ -280,7 +317,7 @@ const ScryerHeader = ({ children }) => {
                }}>
               Connector ↗
             </a>
-            <a href="https://www.fruityrumpus.com/forums/t/classpecting-with-graphs-rotations-and-groups"
+            <a href="https://www.fruityrumpus.com/"
                target="_blank"
                rel="noopener noreferrer"
                onClick={() => setMenuOpen(false)}
@@ -293,7 +330,7 @@ const ScryerHeader = ({ children }) => {
                  padding: '0 16px',
                  fontSize: '1.1rem',
                }}>
-              FRAFpost ↗
+              <FrafWordmark trailing=" ↗"/>
             </a>
           </div>
         </div>
