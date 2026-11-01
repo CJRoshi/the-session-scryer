@@ -159,9 +159,7 @@ function resolveOutlineColor(mode, canonChars, nonCanonChars) {
     return key ? OUTLINE_COLORS[key] : null;
   }
   if (mode === 'text') {
-    // First member with a color wins. If this session has no colored
-    // members, there's no text color to borrow — fall back to no
-    // outline (matches the Connector's behavior on character-less pages).
+    // First member with a color wins.
     const pickColor = (list) => {
       if (!list) return null;
       for (const ch of list) {
@@ -169,7 +167,9 @@ function resolveOutlineColor(mode, canonChars, nonCanonChars) {
       }
       return null;
     };
-    return pickColor(canonChars) || pickColor(nonCanonChars) || null;
+    const found = pickColor(canonChars) || pickColor(nonCanonChars);
+    if (found) return found;
+    return resolveOutlineColor('automatic', canonChars, nonCanonChars);
   }
   return OUTLINE_COLORS[mode] || null;
 }
