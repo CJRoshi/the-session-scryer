@@ -177,13 +177,14 @@ function resolveOutlineColor(mode, canonChars, nonCanonChars) {
 const DISC_OVERSHOOT = 1.05;
 const DISC_INSET     = 0.92;
 
-/* Per-aspect vertical offset inside the disc, as a fraction of disc
-   diameter. Positive = move DOWN. Blood's gash sits at the top of its
-   bbox (drips below), so centering on the gash means nudging the
-   whole symbol down a touch. */
-const ASPECT_DISC_Y_OFFSET_FRAC = {
-  blood: 0.045,
+/* Per-aspect vertical/horizontal offset inside the disc. */
+const ASPECT_DISC_OFFSET_FRAC = {
+  blood: { y:  0.045 },
+  mind:  { x:  0.018, y: -0.022 },
 };
+const ASPECT_DISC_Y_OFFSET_FRAC = Object.fromEntries(
+  Object.entries(ASPECT_DISC_OFFSET_FRAC).map(([k, v]) => [k, v.y || 0])
+);
 
 const aspectAssetCache  = {};
 const ringGeometryCache = {};
@@ -662,8 +663,10 @@ const ClasspectGlyph = React.forwardRef(({
     aspectRenderW = bboxW * scale;
     aspectRenderH = bboxH * scale;
   }
-  // Per-aspect vertical nudge inside the disc (see ASPECT_DISC_Y_OFFSET_FRAC).
-  const aspectYOffset = (ASPECT_DISC_Y_OFFSET_FRAC[asp] || 0) * discSize;
+  // Per-aspect nudge inside the disc (see ASPECT_DISC_OFFSET_FRAC).
+  const _aspOff      = ASPECT_DISC_OFFSET_FRAC[asp] || {};
+  const aspectXOffset = (_aspOff.x || 0) * discSize;
+  const aspectYOffset = (_aspOff.y || 0) * discSize;
 
   // Compose the glyph — disc + aspect + ring + substance — into a
   // transparent-background PNG blob at the requested outputSize.
@@ -701,7 +704,7 @@ const ClasspectGlyph = React.forwardRef(({
     if (aspectAsset.img && aspectAsset.img.complete) {
       const aw = cs(aspectRenderW);
       const ah = cs(aspectRenderH);
-      ctx.drawImage(aspectAsset.img, cs(discCxPx) - aw / 2, cs(discCyPx + aspectYOffset) - ah / 2, aw, ah);
+      ctx.drawImage(aspectAsset.img, cs(discCxPx + aspectXOffset) - aw / 2, cs(discCyPx + aspectYOffset) - ah / 2, aw, ah);
     }
 
     // 3. Ring (mask + fill), tinted via scratch canvas + source-in. The
@@ -844,7 +847,7 @@ const ClasspectGlyph = React.forwardRef(({
     const discR = cs(discSize / 2);
     const discX = PAD + cs(discCxPx), discY = PAD + cs(discCyPx);
     const aw = cs(aspectRenderW), ah = cs(aspectRenderH);
-    const asX = PAD + cs(discCxPx) - aw / 2;
+    const asX = PAD + cs(discCxPx + aspectXOffset) - aw / 2;
     const asY = PAD + cs(discCyPx + aspectYOffset) - ah / 2;
 
     const ringText = await fetchRingSvgText(cls);
@@ -1192,7 +1195,7 @@ const ClasspectGlyph = React.forwardRef(({
                  style={{
                    position: 'absolute',
                    top:  `${discCyPx + aspectYOffset - aspectRenderH / 2}px`,
-                   left: `${discCxPx - aspectRenderW / 2}px`,
+                   left: `${discCxPx + aspectXOffset - aspectRenderW / 2}px`,
                    width:  `${aspectRenderW}px`, height: `${aspectRenderH}px`,
                    pointerEvents: 'none',
                  }}/>
